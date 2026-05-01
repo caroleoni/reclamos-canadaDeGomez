@@ -3,35 +3,18 @@ import toast from "react-hot-toast";
 import { MapContainer, Marker, TileLayer, useMapEvent } from "react-leaflet";
 import { complaintCategories } from "../data/categories";
 
-// const categories = [
-//     "Agua",
-//     "Alumbrado",
-//     "Baches",
-//     "Cloacas",
-//     "Arbolado",
-//     "Calles",
-//     "Columnas/Cableados",
-//     "Comercios/Industrias",
-//     "Contaminación",
-//     "Educación",
-//     "Gas",
-//     "Luz",
-//     "Parques/Plazas",
-//     "Residuos",
-//     "Salud",
-//     "Trámites Municipales",
-//     "Transporte/Tránsito",
-//     "Veredas",
-//     "Otros"
-// ];
-
 const initialFormData = {
     description: '',
     category: '',
     photo: null,
     name: '',
     lastname: '',
-    phone: ''
+    phone: '',
+    email: '',
+    claimantAddress: '',
+    claimAddress: '',
+    neighborhood: '',
+    dni: '',
 };
 
 function LocationPicker({ selectedPosition, setSeletedPosition }) {
@@ -96,7 +79,18 @@ export default function ComplaintModal({ isOpen, setIsOpen, selectedPosition, se
         if (!selectedPosition) {
             newErrors.position = "Por favor seleccioná una ubicación en el mapa.";
         }
-        
+        if (!formData.name.trim()) {
+            newErrors.name = "Por favor escribí tu nombre.";
+        }
+
+        if (!formData.lastname.trim()) {
+            newErrors.lastname = "Por favor escribí tu apellido.";
+        }
+
+        if (!formData.phone.trim()) {
+            newErrors.phone = "Por favor escribí tu teléfono.";
+        }
+
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
     };
@@ -229,44 +223,116 @@ export default function ComplaintModal({ isOpen, setIsOpen, selectedPosition, se
                             )}
                         </div>
 
+                        <div className="border-t border-green-700 pt-4">
+                            <h3 className="text-xl font-bold mb-2">Datos de la ubicación</h3>
 
-                        <div>
-                            <label className="block mb-2 font-semibold">Nombre</label>
-                            <input
-                                type="text"
-                                className="w-full rounded-xl bg-black border border-green-700 focus:border-blue-500 px-4 py-3 outline-none"
-                                placeholder="Tu Nombre"
-                                name="name"
-                                value={formData.name}
-                                onChange={handleChange}
-                            />
-                            
+                            <div>
+                                <label className="block mb-2 font-semibold">Domicilio del reclamo</label>
+                                <input
+                                    type="text"
+                                    className="w-full rounded-xl bg-black border border-green-700 focus:border-blue-500 px-4 py-3 outline-none"
+                                    placeholder="Ej: calle y número aproximado"
+                                    name="claimAddress"
+                                    value={formData.claimAddress}
+                                    onChange={handleChange}
+                                />
+                            </div>
+
+                            <div className="mt-4">
+                                <label className="block mb-2 font-semibold">Barrio o Zona</label>
+                                <input
+                                    type="text"
+                                    className="w-full rounded-xl bg-black border border-green-700 focus:border-blue-500 px-4 py-3 outline-none"
+                                    placeholder="Ej: centro, zona norte, barrio..."
+                                    name="neighborhood"
+                                    value={formData.neighborhood}
+                                    onChange={handleChange}
+                                />
+                            </div>
                         </div>
 
-                        <div>
-                            <label className="block mb-2 font-semibold">Apellido</label>
-                            <input
-                                type="text"
-                                className="w-full rounded-xl bg-black border border-green-700 focus:border-blue-500 px-4 py-3 outline-none"
-                                placeholder="Tu Apellido"
-                                name="lastname"
-                                value={formData.lastname}
-                                onChange={handleChange}
-                            />
-                            
-                        </div>
+                        <div className="border-t border-green-700 pt-4">
+                            <h3 className="text-xl font-bold mb-2">Tus datos de contacto</h3>
+                            <p className="text-sm text-gray-300 mb-4">
+                                Estos datos nos ayudan a hacer seguimiento del reclamo y contactarte si hay novedades.
+                            </p>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block mb-2 font-semibold">Nombre</label>
+                                    <input
+                                        type="text"
+                                        className="w-full rounded-xl bg-black border border-green-700 focus:border-blue-500 px-4 py-3 outline-none"
+                                        placeholder="Tu Nombre"
+                                        name="name"
+                                        value={formData.name}
+                                        onChange={handleChange}
+                                    />
+                                    {errors.name && <p className="text-red-400 text-sm mt-1">{errors.name}</p>}
+                                </div>
 
-                        <div>
-                            <label className="block mb-2 font-semibold">Teléfono</label>
-                            <input
-                                type="text"
-                                className="w-full rounded-xl bg-black border border-green-700 focus:border-blue-500 px-4 py-3 outline-none"
-                                placeholder="Tu Teléfono"
-                                name="phone"
-                                value={formData.phone}
-                                onChange={handleChange}
-                            />
-                            
+                                <div>
+                                    <label className="block mb-2 font-semibold">Apellido</label>
+                                    <input
+                                        type="text"
+                                        className="w-full rounded-xl bg-black border border-green-700 focus:border-blue-500 px-4 py-3 outline-none"
+                                        placeholder="Tu Apellido"
+                                        name="lastname"
+                                        value={formData.lastname}
+                                        onChange={handleChange}
+                                    />
+                                    {errors.lastname && <p className="text-red-400 text-sm mt-1">{errors.lastname}</p>}
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                                <div>
+                                    <label className="block mb-2 font-semibold">Teléfono</label>
+                                    <input
+                                        type="text"
+                                        className="w-full rounded-xl bg-black border border-green-700 focus:border-blue-500 px-4 py-3 outline-none"
+                                        placeholder="Ej: 3471..."
+                                        name="phone"
+                                        value={formData.phone}
+                                        onChange={handleChange}
+                                    />
+                                    {errors.phone && <p className="text-red-400 text-sm mt-1">{errors.phone}</p>}
+                                </div>
+                                <div>
+                                    <label className="block mb-2 font-semibold">Email</label>
+                                    <input
+                                        type="email"
+                                        className="w-full rounded-xl bg-black border border-green-700 focus:border-blue-500 px-4 py-3 outline-none"
+                                        placeholder="tuemail@email.com"
+                                        name="email"
+                                        value={formData.email}
+                                        onChange={handleChange}
+                                    />
+
+                                </div>
+                            </div>
+
+                            <div className="mt-4">
+                                <label className="block mb-2 font-semibold">Domicilio del reclamante</label>
+                                <input
+                                    type="text"
+                                    className="w-full rounded-xl bg-black border border-green-700 focus:border-blue-500 px-4 py-3 outline-none"
+                                    placeholder="Tu domicilio"
+                                    name="claimantAddress"
+                                    value={formData.claimantAddress}
+                                    onChange={handleChange}
+                                />
+                            </div>
+
+                            <div className="mt-4">
+                                <label className="block mb-2 font-semibold">DNI</label>
+                                <input
+                                    type="text"
+                                    className="w-full rounded-xl bg-black border border-green-700 focus:border-blue-500 px-4 py-3 outline-none"
+                                    placeholder="Opcional"
+                                    name="dni"
+                                    value={formData.dni}
+                                    onChange={handleChange}
+                                />
+                            </div>
                         </div>
 
                         <button
