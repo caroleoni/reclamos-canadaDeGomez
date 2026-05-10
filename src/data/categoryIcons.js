@@ -18,6 +18,9 @@ import {
     Building2,
     Wrench,
     TrafficCone,
+    Sprout,
+    Home,
+    MoreHorizontal,
 } from "lucide-react";
 
 export const categoryIcons = {
@@ -37,10 +40,11 @@ export const categoryIcons = {
     "file-text": FileText,
     bus: Bus,
     footprints: Footprints,
-    home: Building2,
+    home: Home,
     pipe: Wrench,
     construction: TrafficCone,
-    "more-horizontal": Building2,
+    sprout: Sprout,
+    "more-horizontal": MoreHorizontal,
 };
 
 
