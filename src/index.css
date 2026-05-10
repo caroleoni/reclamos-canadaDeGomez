@@ -58,6 +58,25 @@
     font-weight: 600;
 }
 
+.leaflet-popup-close-button {
+  color: white !important;
+  background: #16a34a !important;
+  border-radius: 999px !important;
+  width: 26px !important;
+  height: 26px !important;
+  line-height: 24px !important;
+  text-align: center !important;
+  top: 8px !important;
+  right: 8px !important;
+  font-size: 18px !important;
+  font-weight: bold !important;
+}
+
+.leaflet-popup-close-button:hover {
+  background: #22c55e !important;
+  color: white !important;
+}
+
 .map-category-icon {
     width: 34px;
     height: 34px;

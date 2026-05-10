@@ -1,6 +1,6 @@
-import { categories } from "../data/categories";
+import { categoryIcons } from "../data/categoryIcons";
 
-export default function Sidebar({ isOpen, setIsOpen, setIsModalOpen, activeCategory, setActiveCategory }) {
+export default function Sidebar({ categories, isOpen, setIsOpen, setIsModalOpen, activeCategory, setActiveCategory, setIsConsultModalOpen }) {
 
     return (
         <div
@@ -27,25 +27,35 @@ export default function Sidebar({ isOpen, setIsOpen, setIsModalOpen, activeCateg
                         >
                             Nuevo Reclamo
                         </button>
+                        <button
+                        onClick={() => setIsConsultModalOpen(true)}
+                            className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl px-4 py-3 mb-4"
+                        >
+                            Consultar Reclamo
+                        </button>
+                        <p className="text-xs text-gray-300 mb-4 px-1">
+                            Ingresá tu número de seguimiento para ver el estado de tu reclamo.
+                        </p>
 
                         {/* CATEGORIAS */}
                         <div className="space-y-3">
                             {
                                 categories.map(category => {
-                                    const Icon = category.icon;
+                                    // const Icon = category.icon;
+                                    const Icon = categoryIcons[category.icono] || categoryIcons["more-horizontal"];
 
                                     return (
                                         <button
-                                            key={category.name}
-                                            onClick={() => setActiveCategory(category.name)}
+                                            key={category.slug}
+                                            onClick={() => setActiveCategory(category.slug)}
                                             className={`flex items-center gap-3 w-full text-left border rounded-xl px-4 py-3 transition 
-                                                ${activeCategory === category.name
+                                                ${activeCategory === category.slug
                                                     ? "bg-blue-600 text-white border-blue-600 font-bold"
                                                     : "border-blue-700 hover:border-blue-800/40"
                                                 }`}
                                         >
                                             <Icon size={18} className="text-green-500 shrink-0" />
-                                            <span>{category.name}</span>
+                                            <span>{category.nombre}</span>
                                         </button>
                                     );
 

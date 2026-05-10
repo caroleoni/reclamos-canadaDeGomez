@@ -1,11 +1,12 @@
 import { MapContainer, Marker, Popup, TileLayer, ZoomControl } from "react-leaflet";
 import L from "leaflet";
 import { renderToStaticMarkup } from "react-dom/server";
-import { getCategoryByName } from "../data/categories";
+import { categoryIcons } from "../data/categoryIcons";
 
-function getIcon(categoryName) {
-  const category = getCategoryByName(categoryName);
-  const Icon = category?.icon || getCategoryByName("Otros").icon;
+function getIcon(complaint) {
+  // const category = getCategoryByName(categoryName);
+  // const Icon = category?.icon || getCategoryByName("Otros").icon;
+  const Icon = categoryIcons[complaint.categoryIcon] || categoryIcons["more-horizontal"];
 
   const iconMarkup = renderToStaticMarkup(
     <Icon size={22} color="white" strokeWidth={2.5} />
@@ -33,7 +34,7 @@ export default function MapView({ selectedPosition, complaints }) {
   };
 
   return (
-    <div className="relative h-[700px] w-full">
+    <div className="relative h-[420px] md:h-[700px] w-full">
       <MapContainer
         center={[-32.816, -61.394]}
         zoom={13}
@@ -56,7 +57,7 @@ export default function MapView({ selectedPosition, complaints }) {
         }
         {
           complaints.map(complaint => (
-            <Marker key={complaint.id} position={complaint.position} icon={getIcon(complaint.category)}>
+            <Marker key={complaint.id} position={complaint.position} icon={getIcon(complaint)}>
               <Popup className="custom-popup">
                 <div className="popup-card">
                   {
@@ -70,6 +71,7 @@ export default function MapView({ selectedPosition, complaints }) {
                   }
                   <div className="popup-badge">{complaint.category}</div>
                   <p className="popup-description">{complaint.description}</p>
+                  <p className="popup-id">N° {complaint.numeroReclamo}</p>
                   <p className="popup-id">Cargado el {formatDate(complaint.createdAt)}</p>
                 </div>
               </Popup>

@@ -1,11 +1,11 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import { MapContainer, Marker, TileLayer, useMapEvent } from "react-leaflet";
-import { complaintCategories } from "../data/categories";
+import { crearReclamo, subirFotoReclamo, obtenerCategorias } from "../services/reclamosService";
 
 const initialFormData = {
     description: '',
-    category: '',
+    categoryId: '',
     photo: null,
     name: '',
     lastname: '',
@@ -30,8 +30,25 @@ export default function ComplaintModal({ isOpen, setIsOpen, selectedPosition, se
     const [formData, setFormData] = useState(initialFormData);
     const [errors, setErrors] = useState({});
     const [photoPreview, setPhotoPreview] = useState("");
+    const [categorias, setCategorias] = useState([]);
+    const [loading, setLoading] = useState(false);
+    const [numeroReclamo, setNumeroReclamo] = useState(null);
 
-    if (!isOpen) return false;
+    useEffect(() => {
+        async function cargarCategorias() {
+            try {
+                const data = await obtenerCategorias();
+                setCategorias(data);
+
+            } catch (error) {
+                console.error(error);
+                toast.error("No se pudieron cargar las categorías");
+            }
+        }
+            cargarCategorias();
+    }, []);
+
+    if (!isOpen) return null;
 
     function handleChange(e) {
         const { name, value, files } = e.target;
@@ -65,6 +82,7 @@ export default function ComplaintModal({ isOpen, setIsOpen, selectedPosition, se
         setSeletedPosition(null);
         setErrors({});
         setPhotoPreview("");
+        setNumeroReclamo(null);
     };
 
     function validateForm() {
@@ -73,8 +91,8 @@ export default function ComplaintModal({ isOpen, setIsOpen, selectedPosition, se
         if (!formData.description.trim()) {
             newErrors.description = "Por favor escribí una descripción."
         }
-        if (!formData.category.trim()) {
-            newErrors.category = "Por favor seleccioná una categoría."
+        if (!formData.categoryId.trim()) {
+            newErrors.categoryId = "Por favor seleccioná una categoría."
         }
         if (!selectedPosition) {
             newErrors.position = "Por favor seleccioná una ubicación en el mapa.";
@@ -95,26 +113,67 @@ export default function ComplaintModal({ isOpen, setIsOpen, selectedPosition, se
         return Object.keys(newErrors).length === 0;
     };
 
-    function handleSubmit(e) {
+    async function handleSubmit(e) {
         e.preventDefault();
 
         if (!validateForm()) return;
 
-        const newComplaint = {
-            id: crypto.randomUUID(),
-            ...formData,
-            photoPreview,
-            position: selectedPosition,
-            createdAt: new Date().toISOString(),
+        setLoading(true);
+
+        try {
+            const reclamoCreado = await crearReclamo({
+                nombre_reclamante: formData.name,
+                apellido_reclamante: formData.lastname,
+                dni_reclamante: formData.dni || null,
+                telefono_reclamante: formData.phone,
+                email_reclamante: formData.email || null,
+                domicilio_reclamante: formData.claimantAddress || null,
+
+                categoria_id: formData.categoryId,
+                descripcion: formData.description,
+                domicilio_reclamo: formData.claimAddress || null,
+                barrio_zona: formData.neighborhood || null,
+
+                latitud: selectedPosition[0],
+                longitud: selectedPosition[1],
+            });
+
+            if (formData.photo) {
+                await subirFotoReclamo(reclamoCreado.id, formData.photo)
+            }
+
+            const categoriaSeleccionada = categorias.find(
+                categoria => categoria.id === formData.categoryId
+            );
+
+            addComplaint({
+                id: reclamoCreado.id,
+                ...formData,
+                category: categoriaSeleccionada?.nombre || "",
+                categorySlug: categoriaSeleccionada?.slug || "",
+                categoryIcon: categoriaSeleccionada?.icono || "more-horizontal",
+                photoPreview,
+                position: selectedPosition,
+                createdAt: reclamoCreado.created_at,
+                numeroReclamo: reclamoCreado.numero_reclamo,
+            });
+
+            setNumeroReclamo(reclamoCreado.numero_reclamo);
+
+            toast.success(`Reclamo enviado. Número: ${reclamoCreado.numero_reclamo}`, {
+                duration: 6000,
+                position: 'top-right',
+                iconTheme: { primary: '#000' },
+            });
+            resetForm();
+            setIsOpen(false);
+
+        } catch (error) {
+            console.error(error);
+            toast.error(error.message || "No se pudo enviar el reclamo");
+        } finally {
+            setLoading(false);
         }
-        addComplaint(newComplaint);
-        resetForm();
-        setIsOpen(false);
-        toast.success("Reclamo enviado correctamente", {
-            duration: 4000,
-            position: 'top-right',
-            iconTheme: { primary: '#000' },
-        });
     }
 
     return (
@@ -151,23 +210,23 @@ export default function ComplaintModal({ isOpen, setIsOpen, selectedPosition, se
                             <label className="block mb-2 font-semibold">Categoria</label>
                             <select
                                 className="w-full rounded-xl bg-black border border-green-700 focus:border-blue-500 px-4 py-3 outline-none"
-                                name="category"
-                                value={formData.category}
+                                name="categoryId"
+                                value={formData.categoryId}
                                 onChange={handleChange}
                             >
 
                                 <option>Selecciona Categoria</option>
                                 {
-                                    complaintCategories.map(category => (
-                                        <option key={category.name} value={category.name}>
-                                            {category.name}
+                                    categorias.map(categoria => (
+                                        <option key={categoria.id} value={categoria.id}>
+                                            {categoria.nombre}
                                         </option>
                                     ))
                                 }
 
                             </select>
-                            {errors.category && (
-                                <p className="text-red-400 text-sm mt-1">{errors.category}</p>
+                            {errors.categoryId && (
+                                <p className="text-red-400 text-sm mt-1">{errors.categoryId}</p>
                             )}
                         </div>
 
@@ -335,11 +394,22 @@ export default function ComplaintModal({ isOpen, setIsOpen, selectedPosition, se
                             </div>
                         </div>
 
+                        {
+                            numeroReclamo && (
+                                <div className="bg-green-100 text-green-900 p-4 rounded-xl">
+                                    Reclamo registrado con éxito.
+                                    <br />
+                                    Número de seguimiento: <strong>{numeroReclamo}</strong>
+                                </div>
+                            )
+                        }
+
                         <button
                             type="submit"
+                            disabled={loading}
                             className="bg-green-500 hover:bg-green-400 text-white font-bold px-6 py-3 rounded-xl"
                         >
-                            Enviar Reclamo
+                            {loading ? "Enviando..." :  "Enviar Reclamo"}
                         </button>
                     </form>
                 </div>
