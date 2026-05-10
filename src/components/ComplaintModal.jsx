@@ -33,6 +33,7 @@ export default function ComplaintModal({ isOpen, setIsOpen, selectedPosition, se
     const [categorias, setCategorias] = useState([]);
     const [loading, setLoading] = useState(false);
     const [numeroReclamo, setNumeroReclamo] = useState(null);
+    const [showSuccess, setShowSuccess] = useState(false);
 
     useEffect(() => {
         async function cargarCategorias() {
@@ -47,6 +48,47 @@ export default function ComplaintModal({ isOpen, setIsOpen, selectedPosition, se
         }
             cargarCategorias();
     }, []);
+
+    if(showSuccess) {
+        return (
+            <div className="fixed inset-0 bg-black/60 z-[2000] flex items-center justify-center -px-4">
+                <div className="bg-slate-950 border border-green-600 text-white w-full max-w-md rounded-2xl p-6 shadow-2xl text-center">
+                    <div className="text-5xl mb-4">✅</div>
+                    <h2 className="text-2xl font-bold text-green-400 mb-3">Reclamo enviado</h2>
+                    <p className="text-green-300 mb-4">Tu número de seguimiento es: </p>
+                    <div className="bg-black border border-green-500 rounded-2xl py-4 mb-6">
+                        <p className="text-3xl font-extrabold tracking-wider text-green-400">
+                            {numeroReclamo}
+                        </p>
+                    </div>
+                    <p className="text-sm text-gray-400 mb-6">Guardá este número para consultar el estado de tu reclamo.</p>
+
+                    <div className="flex flex-col gap-3">
+                        <button
+                            onClick={() => {
+                                navigator.clipboard.writeText(numeroReclamo);
+                                toast.success("Número copiado");
+                            }}
+                            className="bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-xl"
+                        >
+                            Copiar número
+                        </button>
+
+                        <button
+                            onClick={() => {
+                                resetForm();
+                                setIsOpen(false);
+                            }}
+                            className="bg-green-600 hover:bg-green-500 text-white font-bold py-3 rounded-xl"
+                        >
+                            Cerrar
+                        </button>
+                    </div>
+                </div>
+            </div>
+        )
+    }
+
 
     if (!isOpen) return null;
 
@@ -83,6 +125,7 @@ export default function ComplaintModal({ isOpen, setIsOpen, selectedPosition, se
         setErrors({});
         setPhotoPreview("");
         setNumeroReclamo(null);
+        setShowSuccess(false);
     };
 
     function validateForm() {
@@ -165,8 +208,9 @@ export default function ComplaintModal({ isOpen, setIsOpen, selectedPosition, se
                 position: 'top-right',
                 iconTheme: { primary: '#000' },
             });
-            resetForm();
-            setIsOpen(false);
+            // resetForm();
+            // setIsOpen(false);
+            setShowSuccess(true);
 
         } catch (error) {
             console.error(error);
