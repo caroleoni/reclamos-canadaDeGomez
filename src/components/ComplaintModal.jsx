@@ -46,10 +46,10 @@ export default function ComplaintModal({ isOpen, setIsOpen, selectedPosition, se
                 toast.error("No se pudieron cargar las categorías");
             }
         }
-            cargarCategorias();
+        cargarCategorias();
     }, []);
 
-    if(showSuccess) {
+    if (showSuccess) {
         return (
             <div className="fixed inset-0 bg-black/60 z-[2000] flex items-center justify-center -px-4">
                 <div className="bg-slate-950 border border-green-600 text-white w-full max-w-md rounded-2xl p-6 shadow-2xl text-center">
@@ -61,7 +61,9 @@ export default function ComplaintModal({ isOpen, setIsOpen, selectedPosition, se
                             {numeroReclamo}
                         </p>
                     </div>
-                    <p className="text-sm text-gray-400 mb-6">Guardá este número para consultar el estado de tu reclamo.</p>
+                    <p className="text-sm text-gray-400 mb-6">
+                        Guardá este número para consultar el estado de tu reclamo.
+                    </p>
 
                     <div className="flex flex-col gap-3">
                         <button
@@ -453,7 +455,7 @@ export default function ComplaintModal({ isOpen, setIsOpen, selectedPosition, se
                             disabled={loading}
                             className="bg-green-500 hover:bg-green-400 text-white font-bold px-6 py-3 rounded-xl"
                         >
-                            {loading ? "Enviando..." :  "Enviar Reclamo"}
+                            {loading ? "Enviando..." : "Enviar Reclamo"}
                         </button>
                     </form>
                 </div>

@@ -138,7 +138,7 @@ export async function subirFotoReclamo(reclamoId, archivo) {
 export async function obtenerReclamosMapa() {
     const { data, error } = await supabase.rpc("obtener_reclamos_mapa_publico");
 
-    if(error) {
+    if (error) {
         console.error("Error al obtener reclamos del mapa:", error);
         throw new Error("No se pudieron cargar los reclamos del mapa.");
     }
@@ -150,9 +150,55 @@ export async function buscarReclamoPorNumero(numero) {
         p_numero: numero.trim(),
     });
 
-    if(error) {
+    if (error) {
         console.error(error);
         throw new Error("No se pudo consultar el reclamo");
     }
     return data?.[0] || null;
+};
+
+export async function obtenerReclamosAdmin() {
+    const { data, error } = await supabase
+        .from("reclamos")
+        .select(`
+            id,
+            numero_reclamo,
+            descripcion,
+            estado,
+            prioridad,
+            barrio_zona,
+            domicilio_reclamo,
+            nombre_reclamante,
+            apellido_reclamante,
+            telefono_reclamante,
+            email_reclamante,
+            created_at,
+            categoria:categorias (
+                nombre,
+                slug
+            )     
+        `)
+        .order("created_at", { ascending: false });
+
+    if(error) {
+        console.error("Error al obtener reclamos admin:", error);
+        throw new Error("No se pudieron cargar los reclamos");
+    }
+    return data;
+};
+
+//Respuesta del Admin
+export async function actualizarGestionReclamo(id, datos) {
+    const { error } = await supabase.rpc("actualizar_gestion_reclamo_admin", {
+        p_reclamo_id: id,
+        p_estado: datos.estado,
+        p_prioridad: datos.prioridad,
+        p_notas_internas: datos.notas_internas,
+    })
+        
+        if(error) {
+            console.error("Error al actualizar reclamo:", error);
+            throw new Error("No se pudo actualizar el reclamo");
+        }
+        
 }
