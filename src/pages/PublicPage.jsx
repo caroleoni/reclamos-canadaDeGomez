@@ -35,7 +35,7 @@ export default function PublicPage() {
                         id: "todas",
                         nombre: "Todas",
                         slug: "todas",
-                        icono: "alert-triangle",
+                        icono: "todas.jpeg",
                     },
                     ...categoriasDB
                 ]);

@@ -17,13 +17,24 @@ const initialFormData = {
     dni: '',
 };
 
-function LocationPicker({ selectedPosition, setSeletedPosition }) {
+const locationIcon = L.divIcon({
+    html: `<div class="selected-location-pin">📍</div>`,
+    className: "",
+    iconSize: [36, 36],
+    iconAnchor: [18, 36],
+});
+
+function LocationPicker({ selectedPosition, setSeletedPosition, setErrors }) {
     useMapEvent({
         click(e) {
             setSeletedPosition([e.latlng.lat, e.latlng.lng]);
+            setErrors((prev) => ({
+                ...prev,
+                position: "",
+            }));
         },
     });
-    return selectedPosition ? <Marker position={selectedPosition} /> : null;
+    return selectedPosition ? <Marker position={selectedPosition} icon={locationIcon} /> : null;
 };
 
 export default function ComplaintModal({ isOpen, setIsOpen, selectedPosition, setSeletedPosition, addComplaint }) {
@@ -277,7 +288,7 @@ export default function ComplaintModal({ isOpen, setIsOpen, selectedPosition, se
                         </div>
 
                         <div>
-                            <label className="block mb-2 font-semibold">Foto</label>
+                            <label className="block mb-2 font-semibold">Foto <span className="text-gray-400">(Opcional)</span></label>
                             <input
                                 type="file"
                                 className="w-full rounded-xl bg-black border border-green-700 focus:border-blue-500 px-4 py-3 outline-none"
@@ -314,7 +325,11 @@ export default function ComplaintModal({ isOpen, setIsOpen, selectedPosition, se
                                         attribution="&copy; OpenStreetMap"
                                         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                                     />
-                                    <LocationPicker setSeletedPosition={setSeletedPosition} />
+                                    <LocationPicker
+                                        selectedPosition={selectedPosition}
+                                        setSeletedPosition={setSeletedPosition}
+                                        setErrors={setErrors}
+                                    />
                                 </MapContainer>
                             </div>
                             {selectedPosition && (
@@ -345,14 +360,25 @@ export default function ComplaintModal({ isOpen, setIsOpen, selectedPosition, se
 
                             <div className="mt-4">
                                 <label className="block mb-2 font-semibold">Barrio o Zona</label>
-                                <input
+                                {/* <input
                                     type="text"
                                     className="w-full rounded-xl bg-black border border-green-700 focus:border-blue-500 px-4 py-3 outline-none"
                                     placeholder="Ej: centro, zona norte, barrio..."
                                     name="neighborhood"
                                     value={formData.neighborhood}
                                     onChange={handleChange}
-                                />
+                                /> */}
+                                <select
+                                    name="neighborhood"
+                                    value={formData.neighborhood}
+                                    onChange={handleChange}
+                                    className="w-full rounded-xl bg-black border border-green-700 focus:border-blue-500 px-4 py-3 outline-none"
+                                >
+                                    <option value="">Seleccioná Barrio/Zona</option>
+                                    <option value="centro">Centro</option>
+                                    <option value="norte">Norte</option>
+                                    <option value="sur">Sur</option>
+                                </select>
                             </div>
                         </div>
 
@@ -390,7 +416,7 @@ export default function ComplaintModal({ isOpen, setIsOpen, selectedPosition, se
                             </div>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
                                 <div>
-                                    <label className="block mb-2 font-semibold">Teléfono</label>
+                                    <label className="block mb-2 font-semibold">WhatsApp</label>
                                     <input
                                         type="text"
                                         className="w-full rounded-xl bg-black border border-green-700 focus:border-blue-500 px-4 py-3 outline-none"
@@ -406,7 +432,7 @@ export default function ComplaintModal({ isOpen, setIsOpen, selectedPosition, se
                                     <input
                                         type="email"
                                         className="w-full rounded-xl bg-black border border-green-700 focus:border-blue-500 px-4 py-3 outline-none"
-                                        placeholder="tuemail@email.com"
+                                        placeholder="Opcional"
                                         name="email"
                                         value={formData.email}
                                         onChange={handleChange}

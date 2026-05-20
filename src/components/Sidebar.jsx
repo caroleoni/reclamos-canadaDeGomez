@@ -1,4 +1,3 @@
-import { categoryIcons } from "../data/categoryIcons";
 
 export default function Sidebar({ categories, isOpen, setIsOpen, setIsModalOpen, activeCategory, setActiveCategory, setIsConsultModalOpen }) {
 
@@ -28,7 +27,7 @@ export default function Sidebar({ categories, isOpen, setIsOpen, setIsModalOpen,
                             Nuevo Reclamo
                         </button>
                         <button
-                        onClick={() => setIsConsultModalOpen(true)}
+                            onClick={() => setIsConsultModalOpen(true)}
                             className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl px-4 py-3 mb-4"
                         >
                             Consultar Reclamo
@@ -42,7 +41,7 @@ export default function Sidebar({ categories, isOpen, setIsOpen, setIsModalOpen,
                             {
                                 categories.map(category => {
                                     // const Icon = category.icon;
-                                    const Icon = categoryIcons[category.icono] || categoryIcons["more-horizontal"];
+                                    // const Icon = categoryIcons[category.icono] || categoryIcons["more-horizontal"];
 
                                     return (
                                         <button
@@ -54,7 +53,11 @@ export default function Sidebar({ categories, isOpen, setIsOpen, setIsModalOpen,
                                                     : "border-blue-700 hover:border-blue-800/40"
                                                 }`}
                                         >
-                                            <Icon size={18} className="text-green-500 shrink-0" />
+                                            <img
+                                                src={`/iconos/${category.icono}`}
+                                                alt={category.nombre}
+                                                className="w-7 h-7 object-contain shrink-0"
+                                            />
                                             <span>{category.nombre}</span>
                                         </button>
                                     );

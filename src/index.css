@@ -88,3 +88,23 @@
     justify-content: center;
     box-shadow: 0 8px 18px rgba(0, 0, 0, 0.35);
 }
+
+.map-road-icon {
+  width: 32px;
+  height: 32px;
+  background: #f4ca19;
+  border: 2px solid #000;
+  border-radius: 5px;
+  transform: rotate(45deg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.map-road-icon span {
+  transform: rotate(-45deg);
+  font-size: 16px;
+  color: #000;
+  font-weight: 900;
+  line-height: 1;
+}

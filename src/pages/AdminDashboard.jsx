@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom"
 import { getCurrentSession, signOutAdmin } from "../services/authService";
 import toast from "react-hot-toast";
-import { obtenerReclamosAdmin } from "../services/reclamosService";
+import { marcarReclamoVisto, obtenerReclamosAdmin } from "../services/reclamosService";
 import { ClipboardList, Clock, Settings, CheckCircle } from "lucide-react";
 import AdminClaimDetailModal from "./AdminClaimDetailModal";
 
@@ -73,9 +73,23 @@ export default function AdminDashboard() {
     }
   };
 
+  async function handleMarcarVisto(reclamo) {
+    try {
+      await marcarReclamoVisto(reclamo.id);
+      setReclamos((prev) =>
+        prev.map((item) =>
+          item.id === reclamo.id ? { ...item, visto: true } : item
+        )
+      );
+      toast.success("Reclamo marcado como visto");
+
+    } catch (error) {
+      toast.error(error.message);
+    }
+  }
+
   const totalReclamos = reclamos.length;
   const pendientes = reclamos.filter((r) => r.estado === "pendiente").length;
-  const enProceso = reclamos.filter((r) => r.estado === "en_proceso").length;
   const resueltos = reclamos.filter((r) => r.estado === "resuelto").length;
 
   if (checkingSession) {
@@ -89,7 +103,6 @@ export default function AdminDashboard() {
   function getEstadoLabel(estado) {
     const estados = {
       pendiente: "Pendiente",
-      en_proceso: "En proceso",
       resuelto: "Resuelto",
     };
     return estados[estado] || estado;
@@ -98,11 +111,10 @@ export default function AdminDashboard() {
   function getEstadoClass(estado) {
     const estilos = {
       pendiente: "bg-yellow-500/15 text-yellow-300 border-yellow-500",
-      en_proceso: "bg-blue-500/15 text-blue-300 border-blue-500",
       resuelto: "bg-green-500/15 text-green-300 border-green-500"
     }
     return estilos[estado] || "bg-gray-500/15 text-gray-300 border-gray-500"
-  }
+  };
 
   return (
     <>
@@ -139,7 +151,6 @@ export default function AdminDashboard() {
           <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-6">
             <Card title="Reclamos Totales" value={loadingReclamos ? '...' : totalReclamos} icon={ClipboardList} />
             <Card title="Pendientes" value={loadingReclamos ? '...' : pendientes} icon={Clock} />
-            <Card title="En proceso" value={loadingReclamos ? '...' : enProceso} icon={Settings} />
             <Card title="Resueltos" value={loadingReclamos ? '...' : resueltos} icon={CheckCircle} />
           </section>
 
@@ -172,7 +183,18 @@ export default function AdminDashboard() {
                           reclamos.map((reclamo) => (
                             <tr key={reclamo.id} className="border-b border-slate-800">
                               <td className="py-3 px-2 font-bold text-green-400">
-                                {reclamo.numero_reclamo}
+                                <div className="flex items-center gap-2">
+                                  {reclamo.numero_reclamo}
+
+                                  {
+                                    !reclamo.visto && (
+                                      <span className="ml-2 bg-red-600 text-white text-xs px-2 py-1 rounded-full">
+                                        Nuevo
+                                      </span>
+                                    )
+                                  }
+
+                                </div>
                               </td>
                               <td className="py-3 px-2">
                                 {reclamo.categoria?.nombre || "Sin Categoría"}
@@ -194,6 +216,16 @@ export default function AdminDashboard() {
                               </td>
 
                               <td className="py-3 px-2 text-right">
+                                {
+                                  !reclamo.visto && (
+                                    <button
+                                      onClick={() => handleMarcarVisto(reclamo)}
+                                      className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-xl font-bold transition mr-2"
+                                    >
+                                      Marcar Visto
+                                    </button>
+                                  )
+                                }
                                 <button
                                   className="bg-green-600 hover:bg-green-500 px-4 py-2 rounded-xl font-bold transition"
                                   onClick={() => setSelectedReclamo(reclamo)}>
@@ -216,9 +248,21 @@ export default function AdminDashboard() {
                           className="bg-slate-950 border border-green-700 rounded-2xl p-4 space-y-3"
                         >
                           <div className="flex items-center justify-between gap-3">
-                            <p className="font-bold text-green-400">
+                            
+                            <div className="flex items-center gap-2">
+                              <p className="font-bold text-green-400">
                               {reclamo.numero_reclamo}
                             </p>
+
+                              {
+                                !reclamo.visto && (
+                                  <span className="ml-2 bg-red-600 text-white text-xs px-2 py-1 rounded-full">
+                                    Nuevo
+                                  </span>
+                                )
+                              }
+
+                            </div>
                             <span
                               className={`inline-flex items-center px-3 py-1 rounded-lg border text-xs font-semibold ${getEstadoClass(
                                 reclamo.estado
@@ -241,6 +285,14 @@ export default function AdminDashboard() {
                             {new Date(reclamo.created_at).toLocaleDateString("es-AR")}
                           </p>
 
+                          {!reclamo.visto && (
+                            <button
+                              onClick={() => handleMarcarVisto(reclamo)}
+                              className="w-full bg-blue-600 hover:bg-blue-500 px-4 py-3 rounded-xl font-bold transition"
+                            >
+                              Marcar Visto
+                            </button>
+                          )}
                           <button
                             onClick={() => setSelectedReclamo(reclamo)}
                             className="w-full bg-green-600 hover:bg-green-500 px-4 py-3 rounded-xl font-bold transition"

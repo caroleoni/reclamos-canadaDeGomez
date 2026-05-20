@@ -5,7 +5,7 @@ import { actualizarGestionReclamo } from "../services/reclamosService";
 export default function AdminClaimDetailModal({ reclamo, onClose, onUpdated }) {
 
     const [estado, setEstado] = useState(reclamo.estado || "pendiente");
-    const [prioridad, setPrioridad] = useState(reclamo.prioridad || "medio");
+    // const [prioridad, setPrioridad] = useState(reclamo.prioridad || "medio");
     const [notaInterna, setNotaInterna] = useState(reclamo.notas_internas || "");
     const [loading, setLoading] = useState(false);
 
@@ -18,7 +18,7 @@ export default function AdminClaimDetailModal({ reclamo, onClose, onUpdated }) {
 
             await actualizarGestionReclamo(reclamo.id, {
                 estado,
-                prioridad,
+                // prioridad,
                 notas_internas: notaInterna,
             });
 
@@ -57,7 +57,7 @@ export default function AdminClaimDetailModal({ reclamo, onClose, onUpdated }) {
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                             <p><strong>Categoría:</strong> {reclamo.categoria?.nombre || "-"}</p>
                             <p><strong>Estado:</strong> {reclamo.estado}</p>
-                            <p><strong>Prioridad:</strong> {reclamo.prioridad || "-"}</p>
+                            {/* <p><strong>Prioridad:</strong> {reclamo.prioridad || "-"}</p> */}
                             <p><strong>Barrio/Zona:</strong> {reclamo.barrio_zona || "-"}</p>
                             <p><strong>Domicilio reclamo:</strong> {reclamo.domicilio_reclamo || "-"}</p>
                             <p>
@@ -89,7 +89,7 @@ export default function AdminClaimDetailModal({ reclamo, onClose, onUpdated }) {
                             Gestión interna
                         </h3>
 
-                        <label className="">Prioridad</label>
+                        {/* <label className="">Prioridad</label>
                         <select
                             value={prioridad}
                             onChange={(e) => setPrioridad(e.target.value)}
@@ -98,7 +98,7 @@ export default function AdminClaimDetailModal({ reclamo, onClose, onUpdated }) {
                             <option value="baja">Baja</option>
                             <option value="media">Media</option>
                             <option value="alta">Alta</option>
-                        </select>
+                        </select> */}
 
                         <label className="block mb-2 font-bold">Estado</label>
                         <select
@@ -107,7 +107,6 @@ export default function AdminClaimDetailModal({ reclamo, onClose, onUpdated }) {
                             className="w-full bg-black border border-green-700 rounded-xl p-3 mb-4 outline-none"
                         >
                             <option value="pendiente">Pendiente</option>
-                            <option value="en_proceso">En Proceso</option>
                             <option value="resuelto">Resuelto</option>
                         </select>
 

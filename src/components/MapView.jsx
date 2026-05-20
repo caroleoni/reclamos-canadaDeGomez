@@ -1,25 +1,33 @@
 import { MapContainer, Marker, Popup, TileLayer, ZoomControl } from "react-leaflet";
 import L from "leaflet";
-import { renderToStaticMarkup } from "react-dom/server";
-import { categoryIcons } from "../data/categoryIcons";
+// import { renderToStaticMarkup } from "react-dom/server";
+
+// function getIcon(complaint) {
+//   // const category = getCategoryByName(categoryName);
+//   // const Icon = category?.icon || getCategoryByName("Otros").icon;
+//   const Icon = categoryIcons[complaint.categoryIcon] || categoryIcons["more-horizontal"];
+
+//   const iconMarkup = renderToStaticMarkup(
+//     <Icon size={22} color="white" strokeWidth={2.5} />
+//   )
+
+//   return L.divIcon({
+//     html: `<div class="map-category-icon">
+//             ${iconMarkup}
+//            </div>`,
+//     className:"",
+//     iconSize: [34, 34],
+//     iconAnchor: [17, 34],
+//     popupAnchor: [0, -34]
+//   });
+// }
 
 function getIcon(complaint) {
-  // const category = getCategoryByName(categoryName);
-  // const Icon = category?.icon || getCategoryByName("Otros").icon;
-  const Icon = categoryIcons[complaint.categoryIcon] || categoryIcons["more-horizontal"];
-
-  const iconMarkup = renderToStaticMarkup(
-    <Icon size={22} color="white" strokeWidth={2.5} />
-  )
-
-  return L.divIcon({
-    html: `<div class="map-category-icon">
-            ${iconMarkup}
-           </div>`,
-    className:"",
+  return L.icon({
+    iconUrl: `/iconos/${complaint.categoryIcon}`,
     iconSize: [34, 34],
-    iconAnchor: [17, 34],
-    popupAnchor: [0, -34]
+    iconAnchor: [17, 17],
+    popupAnchor: [0, -17],
   });
 }
 

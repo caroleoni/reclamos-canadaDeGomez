@@ -50,7 +50,6 @@ export default function ConsultClaimModal({ isOpen, setIsOpen }) {
     function getEstadoLabel(estado) {
         const estados = {
             pendiente: "Pendiente",
-            en_proceso: "En proceso",
             resuelto: "Resuelto",
         };
         return estados[estado] || estado;
@@ -83,7 +82,7 @@ export default function ConsultClaimModal({ isOpen, setIsOpen }) {
                         <input
                             type="text"
                             className="w-full rounded-xl bg-black border border-green-700 focus:border-blue-500 px-4 py-3 outline-none"
-                            placeholder="Ej: REC-2026-00007"
+                            placeholder="Ej: REC100"
                             value={numero}
                             onChange={(e) => setNumero(e.target.value)}
                         />
@@ -117,9 +116,6 @@ export default function ConsultClaimModal({ isOpen, setIsOpen }) {
                             </p>
                             <p>
                                 <strong>Estado:</strong> {getEstadoLabel(reclamo.estado)}
-                            </p>
-                            <p>
-                                <strong>Prioridad:</strong> {reclamo.prioridad}
                             </p>
                             <p>
                                 <strong>Descripción:</strong> {reclamo.descripcion}

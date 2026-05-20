@@ -165,7 +165,7 @@ export async function obtenerReclamosAdmin() {
             numero_reclamo,
             descripcion,
             estado,
-            prioridad,
+            visto,
             barrio_zona,
             domicilio_reclamo,
             nombre_reclamante,
@@ -192,7 +192,6 @@ export async function actualizarGestionReclamo(id, datos) {
     const { error } = await supabase.rpc("actualizar_gestion_reclamo_admin", {
         p_reclamo_id: id,
         p_estado: datos.estado,
-        p_prioridad: datos.prioridad,
         p_notas_internas: datos.notas_internas,
     })
         
@@ -200,5 +199,15 @@ export async function actualizarGestionReclamo(id, datos) {
             console.error("Error al actualizar reclamo:", error);
             throw new Error("No se pudo actualizar el reclamo");
         }
-        
+};
+
+export async function marcarReclamoVisto(id) {
+    const { error } = await supabase.rpc("marcar_reclamo_visto", {
+        p_reclamo_id: id,
+    });
+
+    if(error) {
+        console.error("Error al marcar reclamo como visto:", error);
+        throw new Error("No se pudo marcar el reclamo como visto");
+    }
 }
