@@ -1,25 +1,25 @@
 import { useState } from "react";
 import toast from "react-hot-toast";
-import { actualizarGestionReclamo } from "../services/reclamosService";
+import { updateClaimManagement } from "../services/claimsService";
 
-export default function AdminClaimDetailModal({ reclamo, onClose, onUpdated }) {
+export default function AdminClaimDetailModal({ claim, onClose, onUpdated }) {
 
-    const [estado, setEstado] = useState(reclamo.estado || "pendiente");
-    // const [prioridad, setPrioridad] = useState(reclamo.prioridad || "medio");
-    const [notaInterna, setNotaInterna] = useState(reclamo.notas_internas || "");
+    const [status, setStatus] = useState(claim.status || "pendiente");
+    // const [priority, setPriority] = useState(claim.priority || "medio");
+    const [internalNote, setInternalNote] = useState(claim.internalNotes || "");
     const [loading, setLoading] = useState(false);
 
 
-    if (!reclamo) return null;
+    if (!claim) return null;
 
-   async function handleGuardar() {
+   async function handleSave() {
         try {
             setLoading(true);
 
-            await actualizarGestionReclamo(reclamo.id, {
-                estado,
-                // prioridad,
-                notas_internas: notaInterna,
+            await updateClaimManagement(claim.id, {
+                status,
+                // priority,
+                internalNotes: internalNote,
             });
 
             toast.success("Reclamo actualizado correctamente");
@@ -39,7 +39,7 @@ export default function AdminClaimDetailModal({ reclamo, onClose, onUpdated }) {
                 <div className="flex items-center justify-between p-5 border-b border-green-600">
                     <div>
                         <h2 className="text-2xl font-bold">Detalle del reclamo</h2>
-                        <p className="text-green-400 font-bold">{reclamo.numero_reclamo}</p>
+                        <p className="text-green-400 font-bold">{claim.claimNumber}</p>
                     </div>
                     <button
                         onClick={onClose}
@@ -55,18 +55,18 @@ export default function AdminClaimDetailModal({ reclamo, onClose, onUpdated }) {
                             Datos del reclamo
                         </h3>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                            <p><strong>Categoría:</strong> {reclamo.categoria?.nombre || "-"}</p>
-                            <p><strong>Estado:</strong> {reclamo.estado}</p>
-                            {/* <p><strong>Prioridad:</strong> {reclamo.prioridad || "-"}</p> */}
-                            <p><strong>Barrio/Zona:</strong> {reclamo.barrio_zona || "-"}</p>
-                            <p><strong>Domicilio reclamo:</strong> {reclamo.domicilio_reclamo || "-"}</p>
+                            <p><strong>Categoría:</strong> {claim.category?.name || "-"}</p>
+                            <p><strong>Estado:</strong> {claim.status}</p>
+                            {/* <p><strong>Prioridad:</strong> {claim.priority || "-"}</p> */}
+                            <p><strong>Barrio/Zona:</strong> {claim.neighborhood || "-"}</p>
+                            <p><strong>Domicilio reclamo:</strong> {claim.claimAddress || "-"}</p>
                             <p>
                                 <strong>Fecha:</strong>{" "}
-                                {new Date(reclamo.created_at).toLocaleDateString("es-AR")}
+                                {new Date(claim.createdAt).toLocaleDateString("es-AR")}
                             </p>
                         </div>
                         <p className="mt-4">
-                            <strong>Descripción:</strong> {reclamo.descripcion}
+                            <strong>Descripción:</strong> {claim.description}
                         </p>
                     </section>
 
@@ -76,11 +76,11 @@ export default function AdminClaimDetailModal({ reclamo, onClose, onUpdated }) {
                         </h3>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                             <p>
-                                <strong>Nombre:</strong> {reclamo.nombre_reclamante}{" "}
-                                {reclamo.apellido_reclamante}
+                                <strong>Nombre:</strong> {claim.claimantFirstName}{" "}
+                                {claim.claimantLastName}
                             </p>
-                            <p><strong>Teléfono:</strong> {reclamo.telefono_reclamante || "-"}</p>
-                            <p><strong>Email:</strong> {reclamo.email_reclamante || "-"}</p>
+                            <p><strong>Teléfono:</strong> {claim.claimantPhone || "-"}</p>
+                            <p><strong>Email:</strong> {claim.claimantEmail || "-"}</p>
                         </div>
                     </section>
 
@@ -91,8 +91,8 @@ export default function AdminClaimDetailModal({ reclamo, onClose, onUpdated }) {
 
                         {/* <label className="">Prioridad</label>
                         <select
-                            value={prioridad}
-                            onChange={(e) => setPrioridad(e.target.value)}
+                            value={priority}
+                            onChange={(e) => setPriority(e.target.value)}
                             className="w-full bg-black border-green-700 rounded-xl p-3 mb-4 outline-none"
                         >
                             <option value="baja">Baja</option>
@@ -102,8 +102,8 @@ export default function AdminClaimDetailModal({ reclamo, onClose, onUpdated }) {
 
                         <label className="block mb-2 font-bold">Estado</label>
                         <select
-                            value={estado}
-                            onChange={(e) => setEstado(e.target.value)}
+                            value={status}
+                            onChange={(e) => setStatus(e.target.value)}
                             className="w-full bg-black border border-green-700 rounded-xl p-3 mb-4 outline-none"
                         >
                             <option value="pendiente">Pendiente</option>
@@ -112,15 +112,15 @@ export default function AdminClaimDetailModal({ reclamo, onClose, onUpdated }) {
 
                         <label className="block mb-2 font-bold">Respuesta al vecino</label>
                         <textarea
-                            value={notaInterna}
-                            onChange={(e) => setNotaInterna(e.target.value)}
+                            value={internalNote}
+                            onChange={(e) => setInternalNote(e.target.value)}
                             className="w-full bg-black border border-green-700 rounded-xl p-3 outline-none"
                             rows="4"
                             placeholder="Escribir respuesta o devolución..."
                         />
                         <button 
                             className="mt-4 bg-green-600 hover:bg-green-500 px-5 py-3 rounded-xl font-bold"
-                            onClick={handleGuardar}
+                            onClick={handleSave}
                             disabled={loading}
                         >
                             {loading ? "Guardando..." : "Guardar cambios"}

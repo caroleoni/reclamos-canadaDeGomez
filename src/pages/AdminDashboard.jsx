@@ -1,9 +1,9 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom"
 import { getCurrentSession, signOutAdmin } from "../services/authService";
 import toast from "react-hot-toast";
-import { marcarReclamoVisto, obtenerReclamosAdmin, obtenerEstadisticasReclamosAdmin } from "../services/reclamosService";
-import { ClipboardList, Clock, Settings, CheckCircle } from "lucide-react";
+import { getAdminClaims, getAdminClaimStats, markClaimAsSeen } from "../services/claimsService";
+import { ClipboardList, Clock, CheckCircle } from "lucide-react";
 import AdminClaimDetailModal from "./AdminClaimDetailModal";
 
 export default function AdminDashboard() {
@@ -11,43 +11,43 @@ export default function AdminDashboard() {
   const navigate = useNavigate();
 
   const [checkingSession, setCheckingSession] = useState(true);
-  //Es la variable que permite mostrar algo mientras carga.
-  const [loadingReclamos, setLoadingReclamos] = useState(true);
-  const [reclamos, setReclamos] = useState([]);
-  //Para el modal del panel admin del detalle
-  const [selectedReclamo, setSelectedReclamo] = useState(null);
+  // Shows the admin loading state while claims are fetched.
+  const [loadingClaims, setLoadingClaims] = useState(true);
+  const [claims, setClaims] = useState([]);
+  // Selected row for the admin detail modal.
+  const [selectedClaim, setSelectedClaim] = useState(null);
 
-  //Paginacion
+  // Pagination
   const [currentPage, setCurrentPage] = useState(1);
-  const [totalReclamosCount, setTotalReclamosCount] = useState(0);
+  const [totalClaimsCount, setTotalClaimsCount] = useState(0);
   const [stats, setStats] = useState({
     total: 0,
-    pendientes: 0,
-    resueltos: 0
+    pending: 0,
+    resolved: 0
   })
 
-  const limit = 10; // Cantidad de reclamos por página
-  const totalPages = Math.ceil(totalReclamosCount / limit);
+  const limit = 10;
+  const totalPages = Math.ceil(totalClaimsCount / limit);
 
 
-  async function cargarReclamos(page = currentPage) {
+  async function loadClaims(page = currentPage) {
     try {
-      setLoadingReclamos(true);
-      const result = await obtenerReclamosAdmin(page, limit);
-      const estadisticas = await obtenerEstadisticasReclamosAdmin();
+      setLoadingClaims(true);
+      const result = await getAdminClaims(page, limit);
+      const claimStats = await getAdminClaimStats();
 
-      setReclamos(result.data);
-      setTotalReclamosCount(result.count);
-      setStats(estadisticas);
+      setClaims(result.data);
+      setTotalClaimsCount(result.count);
+      setStats(claimStats);
 
     } catch (error) {
       toast.error(error.message)
     } finally {
-      setLoadingReclamos(false);
+      setLoadingClaims(false);
     }
   }
 
-  //verificar sesión
+  // Verify active admin session.
   useEffect(() => {
     async function checkSession() {
       try {
@@ -57,9 +57,9 @@ export default function AdminDashboard() {
           return;
         }
 
-        await cargarReclamos(currentPage);
-        // const data = await obtenerReclamosAdmin();
-        // setReclamos(data)
+        await loadClaims(currentPage);
+        // const data = await getAdminClaims();
+        // setClaims(data)
 
       } catch (error) {
         console.error(error);
@@ -67,7 +67,7 @@ export default function AdminDashboard() {
 
       } finally {
         setCheckingSession(false);
-        setLoadingReclamos(false);
+        setLoadingClaims(false);
       }
     }
     checkSession();
@@ -89,12 +89,12 @@ export default function AdminDashboard() {
     }
   };
 
-  async function handleMarcarVisto(reclamo) {
+  async function handleMarkAsSeen(claim) {
     try {
-      await marcarReclamoVisto(reclamo.id);
-      setReclamos((prev) =>
+      await markClaimAsSeen(claim.id);
+      setClaims((prev) =>
         prev.map((item) =>
-          item.id === reclamo.id ? { ...item, visto: true } : item
+          item.id === claim.id ? { ...item, seen: true } : item
         )
       );
       toast.success("Reclamo marcado como visto");
@@ -112,20 +112,20 @@ export default function AdminDashboard() {
     );
   };
 
-  function getEstadoLabel(estado) {
-    const estados = {
+  function getStatusLabel(status) {
+    const statusLabels = {
       pendiente: "Pendiente",
       resuelto: "Resuelto",
     };
-    return estados[estado] || estado;
+    return statusLabels[status] || status;
   };
 
-  function getEstadoClass(estado) {
-    const estilos = {
+  function getStatusClass(status) {
+    const statusClasses = {
       pendiente: "bg-yellow-500/15 text-yellow-300 border-yellow-500",
       resuelto: "bg-green-500/15 text-green-300 border-green-500"
     }
-    return estilos[estado] || "bg-gray-500/15 text-gray-300 border-gray-500"
+    return statusClasses[status] || "bg-gray-500/15 text-gray-300 border-gray-500"
   };
 
   return (
@@ -161,9 +161,9 @@ export default function AdminDashboard() {
           </section>
 
           <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-6">
-            <Card title="Reclamos Totales" value={loadingReclamos ? '...' : stats.total} icon={ClipboardList} />
-            <Card title="Pendientes" value={loadingReclamos ? '...' : stats.pendientes} icon={Clock} />
-            <Card title="Resueltos" value={loadingReclamos ? '...' : stats.resueltos} icon={CheckCircle} />
+            <Card title="Reclamos Totales" value={loadingClaims ? '...' : stats.total} icon={ClipboardList} />
+            <Card title="Pendientes" value={loadingClaims ? '...' : stats.pending} icon={Clock} />
+            <Card title="Resueltos" value={loadingClaims ? '...' : stats.resolved} icon={CheckCircle} />
           </section>
 
           <section className="mt-8 bg-slate-900 border border-green-700 rounded-2xl p-5 shadow-xl">
@@ -171,9 +171,9 @@ export default function AdminDashboard() {
               <h2 className="text-xl font-bold">Reclamos cargados</h2>
             </div>
             {
-              loadingReclamos ? (
+              loadingClaims ? (
                 <p className="text-gray-400" > Cargando reclamos...</p>
-              ) : reclamos.length === 0 ? (
+              ) : claims.length === 0 ? (
                 <p className="text-gray-400">Todavía no hay reclamos cargados.</p>
               ) : (
                 <>
@@ -192,14 +192,14 @@ export default function AdminDashboard() {
 
                       <tbody>
                         {
-                          reclamos.map((reclamo) => (
-                            <tr key={reclamo.id} className="border-b border-slate-800">
+                          claims.map((claim) => (
+                            <tr key={claim.id} className="border-b border-slate-800">
                               <td className="py-3 px-2 font-bold text-green-400">
                                 <div className="flex items-center gap-2">
-                                  {reclamo.numero_reclamo}
+                                  {claim.claimNumber}
 
                                   {
-                                    !reclamo.visto && (
+                                    !claim.seen && (
                                       <span className="ml-2 bg-red-600 text-white text-xs px-2 py-1 rounded-full">
                                         Nuevo
                                       </span>
@@ -209,29 +209,29 @@ export default function AdminDashboard() {
                                 </div>
                               </td>
                               <td className="py-3 px-2">
-                                {reclamo.categoria?.nombre || "Sin Categoría"}
+                                {claim.category?.name || "Sin Categoría"}
                               </td>
                               <td className="py-3 px-2">
                                 <span
-                                  className={`inline-flex items-center px-3 py-1 rounded-lg border text-sm font-semibold ${getEstadoClass(
-                                    reclamo.estado
+                                  className={`inline-flex items-center px-3 py-1 rounded-lg border text-sm font-semibold ${getStatusClass(
+                                    claim.status
                                   )}`}
                                 >
-                                  {getEstadoLabel(reclamo.estado)}
+                                  {getStatusLabel(claim.status)}
                                 </span>
                               </td>
                               <td className="py-3 px-2">
-                                {reclamo.barrio_zona || "-"}
+                                {claim.neighborhood || "-"}
                               </td>
                               <td className="py-3 px-2">
-                                {new Date(reclamo.created_at).toLocaleDateString("es-AR")}
+                                {new Date(claim.createdAt).toLocaleDateString("es-AR")}
                               </td>
 
                               <td className="py-3 px-2 text-right">
                                 {
-                                  !reclamo.visto && (
+                                  !claim.seen && (
                                     <button
-                                      onClick={() => handleMarcarVisto(reclamo)}
+                                      onClick={() => handleMarkAsSeen(claim)}
                                       className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-xl font-bold transition mr-2"
                                     >
                                       Marcar Visto
@@ -240,7 +240,7 @@ export default function AdminDashboard() {
                                 }
                                 <button
                                   className="bg-green-600 hover:bg-green-500 px-4 py-2 rounded-xl font-bold transition"
-                                  onClick={() => setSelectedReclamo(reclamo)}>
+                                  onClick={() => setSelectedClaim(claim)}>
                                   Ver detalle
                                 </button>
                               </td>
@@ -307,20 +307,20 @@ export default function AdminDashboard() {
                       )
                     }
                     {
-                      reclamos.map(reclamo => (
+                      claims.map(claim => (
                         <div
-                          key={reclamo.id}
+                          key={claim.id}
                           className="bg-slate-950 border border-green-700 rounded-2xl p-4 space-y-3"
                         >
                           <div className="flex items-center justify-between gap-3">
 
                             <div className="flex items-center gap-2">
                               <p className="font-bold text-green-400">
-                                {reclamo.numero_reclamo}
+                                {claim.claimNumber}
                               </p>
 
                               {
-                                !reclamo.visto && (
+                                !claim.seen && (
                                   <span className="ml-2 bg-red-600 text-white text-xs px-2 py-1 rounded-full">
                                     Nuevo
                                   </span>
@@ -329,37 +329,37 @@ export default function AdminDashboard() {
 
                             </div>
                             <span
-                              className={`inline-flex items-center px-3 py-1 rounded-lg border text-xs font-semibold ${getEstadoClass(
-                                reclamo.estado
+                              className={`inline-flex items-center px-3 py-1 rounded-lg border text-xs font-semibold ${getStatusClass(
+                                claim.status
                               )}`}
                             >
-                              {getEstadoLabel(reclamo.estado)}
+                              {getStatusLabel(claim.status)}
                             </span>
                           </div>
 
                           <p>
                             <span className="text-gray-400">Categoría:</span>{" "}
-                            {reclamo.categoria?.nombre || "Sin categoría"}
+                            {claim.category?.name || "Sin categoría"}
                           </p>
                           <p>
                             <span className="text-gray-400">Barrio/Zona:</span>{" "}
-                            {reclamo.barrio_zona || "-"}
+                            {claim.neighborhood || "-"}
                           </p>
                           <p>
                             <span className="text-gray-400">Fecha:</span>{" "}
-                            {new Date(reclamo.created_at).toLocaleDateString("es-AR")}
+                            {new Date(claim.createdAt).toLocaleDateString("es-AR")}
                           </p>
 
-                          {!reclamo.visto && (
+                          {!claim.seen && (
                             <button
-                              onClick={() => handleMarcarVisto(reclamo)}
+                              onClick={() => handleMarkAsSeen(claim)}
                               className="w-full bg-blue-600 hover:bg-blue-500 px-4 py-3 rounded-xl font-bold transition"
                             >
                               Marcar Visto
                             </button>
                           )}
                           <button
-                            onClick={() => setSelectedReclamo(reclamo)}
+                            onClick={() => setSelectedClaim(claim)}
                             className="w-full bg-green-600 hover:bg-green-500 px-4 py-3 rounded-xl font-bold transition"
                           >
                             Ver detalle
@@ -379,12 +379,12 @@ export default function AdminDashboard() {
         </main>
       </div >
       {
-        selectedReclamo && (
+        selectedClaim && (
           <AdminClaimDetailModal
-            key={selectedReclamo.id}
-            reclamo={selectedReclamo}
-            onClose={() => setSelectedReclamo(null)}
-            onUpdated={cargarReclamos}
+            key={selectedClaim.id}
+            claim={selectedClaim}
+            onClose={() => setSelectedClaim(null)}
+            onUpdated={loadClaims}
           />
         )
       }
@@ -392,14 +392,17 @@ export default function AdminDashboard() {
   )
 };
 
-function Card({ title, value, icon: Icon }) {
+function Card({ title, value, icon }) {
+  const CardIcon = icon;
+
   return (
     <div className="bg-slate-900 border border-green-700 rounded-2xl p-5 shadow-lg flex items-center justify-between">
       <div>
         <p className="text-sm text-gray-400">{title}</p>
         <p className="text-3xl font-bold text-green-400 mt-2">{value}</p>
       </div>
-      <Icon className="text-green-500" size={42} />
+      <CardIcon className="text-green-500" size={42} />
     </div>
   )
 }
+

@@ -5,8 +5,8 @@ import Sidebar from "../components/Sidebar";
 import ComplaintModal from "../components/ComplaintModal";
 import EmergencyBar from "../components/EmergencyBar";
 import Footer from "../components/Footer";
-import { obtenerCategorias, obtenerReclamosMapa } from "../services/reclamosService";
-import { adaptarReclamoMapa } from "../utils/adaptarReclamoMapa";
+import { getCategories, getMapClaims } from "../services/claimsService";
+import { mapClaimForMap } from "../utils/mapClaimAdapter";
 import ConsultClaimModal from "../components/ConsultClaimModal";
 
 export default function PublicPage() {
@@ -15,7 +15,7 @@ export default function PublicPage() {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isConsultModalOpen, setIsConsultModalOpen] = useState(false);
 
-    const [selectedPosition, setSeletedPosition] = useState(null);
+    const [selectedPosition, setSelectedPosition] = useState(null);
     const [complaints, setComplaints] = useState([]);
     const [categories, setCategories] = useState([])
 
@@ -23,31 +23,31 @@ export default function PublicPage() {
 
 
     useEffect(() => {
-        async function cargarDatosIniciales() {
+        async function loadInitialData() {
             try {
-                const [categoriasDB, reclamosDB] = await Promise.all([
-                    obtenerCategorias(),
-                    obtenerReclamosMapa(),
+                const [databaseCategories, databaseClaims] = await Promise.all([
+                    getCategories(),
+                    getMapClaims(),
                 ]);
 
                 setCategories([
                     {
                         id: "todas",
-                        nombre: "Todas",
+                        name: "Todas",
                         slug: "todas",
-                        icono: "todas.jpeg",
+                        icon: "todas.jpeg",
                     },
-                    ...categoriasDB
+                    ...databaseCategories
                 ]);
 
-                const reclamosAdaptados = reclamosDB.map(adaptarReclamoMapa);
-                setComplaints(reclamosAdaptados)
+                const mappedClaims = databaseClaims.map(mapClaimForMap);
+                setComplaints(mappedClaims)
 
             } catch (error) {
-                console.error("Error cargando datos iniciales:", error)
+                console.error("Error loading initial data:", error)
             }
         }
-        cargarDatosIniciales();
+        loadInitialData();
     }, []);
 
     function addComplaint(newComplaint) {
@@ -87,7 +87,7 @@ export default function PublicPage() {
                 isOpen={isModalOpen}
                 setIsOpen={setIsModalOpen}
                 selectedPosition={selectedPosition}
-                setSeletedPosition={setSeletedPosition}
+                setSelectedPosition={setSelectedPosition}
                 addComplaint={addComplaint}
             />
             <ConsultClaimModal

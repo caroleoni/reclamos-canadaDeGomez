@@ -11,7 +11,7 @@ export async function signInAdmin(email, password) {
     return data;
 };
 
-//Aca hacemos la proteccion para entrar al Admin, después lo usamos en AdminDashboard.jsx para validar si el admin está logueado.
+// Protects admin access and lets the dashboard validate the current session.
 export async function getCurrentSession() {
     const { data, error } = await supabase.auth.getSession();
 

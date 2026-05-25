@@ -79,7 +79,7 @@ export default function MapView({ selectedPosition, complaints }) {
                   }
                   <div className="popup-badge">{complaint.category}</div>
                   <p className="popup-description">{complaint.description}</p>
-                  <p className="popup-id">N° {complaint.numeroReclamo}</p>
+                  <p className="popup-id">N° {complaint.claimNumber}</p>
                   <p className="popup-id">Cargado el {formatDate(complaint.createdAt)}</p>
                 </div>
               </Popup>

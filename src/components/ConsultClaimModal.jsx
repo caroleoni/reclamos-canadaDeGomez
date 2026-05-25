@@ -1,12 +1,12 @@
 import { useState } from "react"
 import toast from "react-hot-toast";
-import { buscarReclamoPorNumero } from "../services/reclamosService";
+import { findClaimByNumber } from "../services/claimsService";
 
 
 export default function ConsultClaimModal({ isOpen, setIsOpen }) {
 
-    const [numero, setNumero] = useState("");
-    const [reclamo, setReclamo] = useState(null);
+    const [claimNumber, setClaimNumber] = useState("");
+    const [claim, setClaim] = useState(null);
     const [loading, setLoading] = useState(false);
 
     if (!isOpen) return null;
@@ -14,22 +14,22 @@ export default function ConsultClaimModal({ isOpen, setIsOpen }) {
     async function handleSubmit(e) {
         e.preventDefault();
 
-        if (!numero.trim()) {
+        if (!claimNumber.trim()) {
             toast.error("Ingresá el número de reclamo");
             return;
         }
 
         setLoading(true);
-        setReclamo(null);
+        setClaim(null);
 
         try {
-            const data = await buscarReclamoPorNumero(numero);
+            const data = await findClaimByNumber(claimNumber);
 
             if (!data) {
                 toast.error("No encontramos un reclamo con ese número");
                 return;
             }
-            setReclamo(data);
+            setClaim(data);
 
         } catch (error) {
             console.error(error.message);
@@ -47,12 +47,12 @@ export default function ConsultClaimModal({ isOpen, setIsOpen }) {
         });
     };
 
-    function getEstadoLabel(estado) {
-        const estados = {
+    function getStatusLabel(status) {
+        const statusLabels = {
             pendiente: "Pendiente",
             resuelto: "Resuelto",
         };
-        return estados[estado] || estado;
+        return statusLabels[status] || status;
     }
 
     return (
@@ -65,8 +65,8 @@ export default function ConsultClaimModal({ isOpen, setIsOpen }) {
                         type="text"
                         onClick={() => {
                             setIsOpen(false)
-                            setNumero("")
-                            setReclamo(null)
+                            setClaimNumber("")
+                            setClaim(null)
                         }}
                         className="bg-green-600 hover:bg-green-500 text-white px-4 py-2 rounded-xl font-bold"
                     >
@@ -83,8 +83,8 @@ export default function ConsultClaimModal({ isOpen, setIsOpen }) {
                             type="text"
                             className="w-full rounded-xl bg-black border border-green-700 focus:border-blue-500 px-4 py-3 outline-none"
                             placeholder="Ej: REC100"
-                            value={numero}
-                            onChange={(e) => setNumero(e.target.value)}
+                            value={claimNumber}
+                            onChange={(e) => setClaimNumber(e.target.value)}
                         />
                     </div>
                     <button
@@ -97,61 +97,61 @@ export default function ConsultClaimModal({ isOpen, setIsOpen }) {
                 </form>
 
                 {
-                    reclamo && (
+                    claim && (
                         <div className="mt-6 bg-slate-900 border border-green-700 rounded-2xl p-4 space-y-3">
                             {
-                                reclamo.foto_url && (
+                                claim.photoUrl && (
                                     <img
-                                        src={reclamo.foto_url}
+                                        src={claim.photoUrl}
                                         alt="Foto del reclamo"
                                         className="w-full h-48 object-cover rounded-xl border border-green-700"
                                     />
                                 )
                             }
                             <p className="fond-bold text-green 700">
-                                N° {reclamo.numero_reclamo}
+                                N° {claim.claimNumber}
                             </p>
                             <p>
-                                <strong>Categoría:</strong> {reclamo.categoria_nombre}
+                                <strong>Categoría:</strong> {claim.categoryName}
                             </p>
                             <p>
-                                <strong>Estado:</strong> {getEstadoLabel(reclamo.estado)}
+                                <strong>Estado:</strong> {getStatusLabel(claim.status)}
                             </p>
                             <p>
-                                <strong>Descripción:</strong> {reclamo.descripcion}
+                                <strong>Descripción:</strong> {claim.description}
                             </p>
 
                             {
-                                reclamo.domicilio_reclamo && (
+                                claim.claimAddress && (
                                     <p>
-                                        <strong>Dirección:</strong> {reclamo.domicilio_reclamo}
+                                        <strong>Dirección:</strong> {claim.claimAddress}
                                     </p>
                                 )
                             }
 
                             {
-                                reclamo.barrio_zona && (
+                                claim.neighborhood && (
                                     <p>
-                                        <strong>Barrio/Zona:</strong> {reclamo.barrio_zona}
+                                        <strong>Barrio/Zona:</strong> {claim.neighborhood}
                                     </p>
                                 )
                             }
 
                             {
-                                reclamo.notas_internas && (
+                                claim.internalNotes && (
                                     <div className="mt-4 bg-black/40 border border-green-700 rounded-xl p-4">
                                         <p className="font-bold text-green-400 mb-2">
                                             Respuesta del equipo:
                                         </p>
                                         <p className="text-gray-300">
-                                            {reclamo.notas_internas}
+                                            {claim.internalNotes}
                                         </p>
                                     </div>
                                 )
                             }
 
                             <p className="text-sm text-gray-400">
-                                Cargando el {formatDate(reclamo.created_at)}
+                                Cargando el {formatDate(claim.createdAt)}
                             </p>
                         </div>
                     )

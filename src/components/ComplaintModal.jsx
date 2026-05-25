@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
+import L from "leaflet";
 import { MapContainer, Marker, TileLayer, useMapEvent } from "react-leaflet";
-import { crearReclamo, subirFotoReclamo, obtenerCategorias } from "../services/reclamosService";
+import { createClaim, getCategories, uploadClaimPhoto } from "../services/claimsService";
 
 const initialFormData = {
     description: '',
@@ -24,10 +25,10 @@ const locationIcon = L.divIcon({
     iconAnchor: [18, 36],
 });
 
-function LocationPicker({ selectedPosition, setSeletedPosition, setErrors }) {
+function LocationPicker({ selectedPosition, setSelectedPosition, setErrors }) {
     useMapEvent({
         click(e) {
-            setSeletedPosition([e.latlng.lat, e.latlng.lng]);
+            setSelectedPosition([e.latlng.lat, e.latlng.lng]);
             setErrors((prev) => ({
                 ...prev,
                 position: "",
@@ -37,27 +38,27 @@ function LocationPicker({ selectedPosition, setSeletedPosition, setErrors }) {
     return selectedPosition ? <Marker position={selectedPosition} icon={locationIcon} /> : null;
 };
 
-export default function ComplaintModal({ isOpen, setIsOpen, selectedPosition, setSeletedPosition, addComplaint }) {
+export default function ComplaintModal({ isOpen, setIsOpen, selectedPosition, setSelectedPosition, addComplaint }) {
     const [formData, setFormData] = useState(initialFormData);
     const [errors, setErrors] = useState({});
     const [photoPreview, setPhotoPreview] = useState("");
-    const [categorias, setCategorias] = useState([]);
+    const [categories, setCategories] = useState([]);
     const [loading, setLoading] = useState(false);
-    const [numeroReclamo, setNumeroReclamo] = useState(null);
+    const [claimNumber, setClaimNumber] = useState(null);
     const [showSuccess, setShowSuccess] = useState(false);
 
     useEffect(() => {
-        async function cargarCategorias() {
+        async function loadCategories() {
             try {
-                const data = await obtenerCategorias();
-                setCategorias(data);
+                const data = await getCategories();
+                setCategories(data);
 
             } catch (error) {
                 console.error(error);
                 toast.error("No se pudieron cargar las categorías");
             }
         }
-        cargarCategorias();
+        loadCategories();
     }, []);
 
     if (showSuccess) {
@@ -69,7 +70,7 @@ export default function ComplaintModal({ isOpen, setIsOpen, selectedPosition, se
                     <p className="text-green-300 mb-4">Tu número de seguimiento es: </p>
                     <div className="bg-black border border-green-500 rounded-2xl py-4 mb-6">
                         <p className="text-3xl font-extrabold tracking-wider text-green-400">
-                            {numeroReclamo}
+                            {claimNumber}
                         </p>
                     </div>
                     <p className="text-sm text-gray-400 mb-6">
@@ -79,7 +80,7 @@ export default function ComplaintModal({ isOpen, setIsOpen, selectedPosition, se
                     <div className="flex flex-col gap-3">
                         <button
                             onClick={() => {
-                                navigator.clipboard.writeText(numeroReclamo);
+                                navigator.clipboard.writeText(claimNumber);
                                 toast.success("Número copiado");
                             }}
                             className="bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-xl"
@@ -134,10 +135,10 @@ export default function ComplaintModal({ isOpen, setIsOpen, selectedPosition, se
 
     function resetForm() {
         setFormData(initialFormData);
-        setSeletedPosition(null);
+        setSelectedPosition(null);
         setErrors({});
         setPhotoPreview("");
-        setNumeroReclamo(null);
+        setClaimNumber(null);
         setShowSuccess(false);
     };
 
@@ -177,46 +178,44 @@ export default function ComplaintModal({ isOpen, setIsOpen, selectedPosition, se
         setLoading(true);
 
         try {
-            const reclamoCreado = await crearReclamo({
-                nombre_reclamante: formData.name,
-                apellido_reclamante: formData.lastname,
-                dni_reclamante: formData.dni || null,
-                telefono_reclamante: formData.phone,
-                email_reclamante: formData.email || null,
-                domicilio_reclamante: formData.claimantAddress || null,
-
-                categoria_id: formData.categoryId,
-                descripcion: formData.description,
-                domicilio_reclamo: formData.claimAddress || null,
-                barrio_zona: formData.neighborhood || null,
-
-                latitud: selectedPosition[0],
-                longitud: selectedPosition[1],
+            const createdClaim = await createClaim({
+                claimantFirstName: formData.name,
+                claimantLastName: formData.lastname,
+                claimantDni: formData.dni || null,
+                claimantPhone: formData.phone,
+                claimantEmail: formData.email || null,
+                claimantAddress: formData.claimantAddress || null,
+                categoryId: formData.categoryId,
+                description: formData.description,
+                claimAddress: formData.claimAddress || null,
+                neighborhood: formData.neighborhood || null,
+                latitude: selectedPosition[0],
+                longitude: selectedPosition[1],
             });
 
             if (formData.photo) {
-                await subirFotoReclamo(reclamoCreado.id, formData.photo)
+                await uploadClaimPhoto(createdClaim.id, formData.photo)
             }
 
-            const categoriaSeleccionada = categorias.find(
-                categoria => categoria.id === formData.categoryId
+            const selectedCategory = categories.find(
+                category => category.id === formData.categoryId
             );
 
             addComplaint({
-                id: reclamoCreado.id,
+                id: createdClaim.id,
                 ...formData,
-                category: categoriaSeleccionada?.nombre || "",
-                categorySlug: categoriaSeleccionada?.slug || "",
-                categoryIcon: categoriaSeleccionada?.icono || "more-horizontal",
+                category: selectedCategory?.name || "",
+                categorySlug: selectedCategory?.slug || "",
+                categoryIcon: selectedCategory?.icon || "more-horizontal",
                 photoPreview,
                 position: selectedPosition,
-                createdAt: reclamoCreado.created_at,
-                numeroReclamo: reclamoCreado.numero_reclamo,
+                createdAt: createdClaim.createdAt,
+                claimNumber: createdClaim.claimNumber,
             });
 
-            setNumeroReclamo(reclamoCreado.numero_reclamo);
+            setClaimNumber(createdClaim.claimNumber);
 
-            toast.success(`Reclamo enviado. Número: ${reclamoCreado.numero_reclamo}`, {
+            toast.success(`Reclamo enviado. Número: ${createdClaim.claimNumber}`, {
                 duration: 6000,
                 position: 'top-right',
                 iconTheme: { primary: '#000' },
@@ -274,9 +273,9 @@ export default function ComplaintModal({ isOpen, setIsOpen, selectedPosition, se
 
                                 <option>Selecciona Categoria</option>
                                 {
-                                    categorias.map(categoria => (
-                                        <option key={categoria.id} value={categoria.id}>
-                                            {categoria.nombre}
+                                    categories.map(category => (
+                                        <option key={category.id} value={category.id}>
+                                            {category.name}
                                         </option>
                                     ))
                                 }
@@ -327,7 +326,7 @@ export default function ComplaintModal({ isOpen, setIsOpen, selectedPosition, se
                                     />
                                     <LocationPicker
                                         selectedPosition={selectedPosition}
-                                        setSeletedPosition={setSeletedPosition}
+                                        setSelectedPosition={setSelectedPosition}
                                         setErrors={setErrors}
                                     />
                                 </MapContainer>
@@ -467,11 +466,11 @@ export default function ComplaintModal({ isOpen, setIsOpen, selectedPosition, se
                         </div>
 
                         {
-                            numeroReclamo && (
+                            claimNumber && (
                                 <div className="bg-green-100 text-green-900 p-4 rounded-xl">
                                     Reclamo registrado con éxito.
                                     <br />
-                                    Número de seguimiento: <strong>{numeroReclamo}</strong>
+                                    Número de seguimiento: <strong>{claimNumber}</strong>
                                 </div>
                             )
                         }

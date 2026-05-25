@@ -7,7 +7,7 @@ export default function Sidebar({ categories, isOpen, setIsOpen, setIsModalOpen,
                     ${isOpen ? "w-72 p-4 max-h-[80vh]" : "w-16 p-2"
                 }`}
         >
-            {/* BOTON ABRIR/CERRAR */}
+            {/* Toggle button */}
             <button
                 onClick={() => setIsOpen(!isOpen)}
                 className="w-full bg-green-600 hover:bg-green-500 text-white font-bold rounded-xl px-4 py-2 mb-4"
@@ -19,7 +19,7 @@ export default function Sidebar({ categories, isOpen, setIsOpen, setIsModalOpen,
             {
                 isOpen && (
                     <div className="overflow-y-auto max-h-[65vh] pr-1">
-                        {/* NUEVO RECLAMO */}
+                        {/* New claim */}
                         <button
                             onClick={() => setIsModalOpen(true)}
                             className="w-full bg-green-500 hover:bg-green-400 text-white font-bold rounded-xl px-4 py-3 mb-4"
@@ -36,13 +36,10 @@ export default function Sidebar({ categories, isOpen, setIsOpen, setIsModalOpen,
                             Ingresá tu número de seguimiento para ver el estado de tu reclamo.
                         </p>
 
-                        {/* CATEGORIAS */}
+                        {/* Categories */}
                         <div className="space-y-3">
                             {
                                 categories.map(category => {
-                                    // const Icon = category.icon;
-                                    // const Icon = categoryIcons[category.icono] || categoryIcons["more-horizontal"];
-
                                     return (
                                         <button
                                             key={category.slug}
@@ -54,11 +51,11 @@ export default function Sidebar({ categories, isOpen, setIsOpen, setIsModalOpen,
                                                 }`}
                                         >
                                             <img
-                                                src={`/iconos/${category.icono}`}
-                                                alt={category.nombre}
+                                                src={`/iconos/${category.icon}`}
+                                                alt={category.name}
                                                 className="w-7 h-7 object-contain shrink-0"
                                             />
-                                            <span>{category.nombre}</span>
+                                            <span>{category.name}</span>
                                         </button>
                                     );
 
