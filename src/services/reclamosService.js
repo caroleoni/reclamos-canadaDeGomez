@@ -157,8 +157,11 @@ export async function buscarReclamoPorNumero(numero) {
     return data?.[0] || null;
 };
 
-export async function obtenerReclamosAdmin() {
-    const { data, error } = await supabase
+export async function obtenerReclamosAdmin(page= 1, limit= 10) {
+    const from = (page - 1) * limit;
+    const to = from + limit - 1;
+
+    const { data, error, count } = await supabase
         .from("reclamos")
         .select(`
             id,
@@ -177,14 +180,15 @@ export async function obtenerReclamosAdmin() {
                 nombre,
                 slug
             )     
-        `)
-        .order("created_at", { ascending: false });
+        `, { count: "exact" })
+        .order("created_at", { ascending: false })
+        .range(from, to);
 
     if(error) {
         console.error("Error al obtener reclamos admin:", error);
         throw new Error("No se pudieron cargar los reclamos");
     }
-    return data;
+    return { data, count };
 };
 
 //Respuesta del Admin
@@ -209,5 +213,30 @@ export async function marcarReclamoVisto(id) {
     if(error) {
         console.error("Error al marcar reclamo como visto:", error);
         throw new Error("No se pudo marcar el reclamo como visto");
+    }
+}
+
+export async function obtenerEstadisticasReclamosAdmin() {
+    const total = await supabase
+        .from("reclamos")
+        .select("id", { count: "exact", head: true });
+
+    const pendientes = await supabase
+        .from("reclamos")
+        .select("id", { count: "exact", head: true })
+        .eq("estado", "pendiente");
+
+    const resueltos = await supabase
+        .from("reclamos")
+        .select("id", { count: "exact", head: true })
+        .eq("estado", "resuelto");
+
+    if(total.error || pendientes.error || resueltos.error) {
+        throw new Error("No se pudieron cargar las estadísticas de reclamos");
+    }
+    return {
+        total: total.count || 0,
+        pendientes: pendientes.count || 0,
+        resueltos: resueltos.count || 0,
     }
 }

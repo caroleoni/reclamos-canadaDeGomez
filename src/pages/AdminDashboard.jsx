@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom"
 import { getCurrentSession, signOutAdmin } from "../services/authService";
 import toast from "react-hot-toast";
-import { marcarReclamoVisto, obtenerReclamosAdmin } from "../services/reclamosService";
+import { marcarReclamoVisto, obtenerReclamosAdmin, obtenerEstadisticasReclamosAdmin } from "../services/reclamosService";
 import { ClipboardList, Clock, Settings, CheckCircle } from "lucide-react";
 import AdminClaimDetailModal from "./AdminClaimDetailModal";
 
@@ -17,12 +17,28 @@ export default function AdminDashboard() {
   //Para el modal del panel admin del detalle
   const [selectedReclamo, setSelectedReclamo] = useState(null);
 
+  //Paginacion
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalReclamosCount, setTotalReclamosCount] = useState(0);
+  const [stats, setStats] = useState({
+    total: 0,
+    pendientes: 0,
+    resueltos: 0
+  })
 
-  async function cargarReclamos() {
+  const limit = 10; // Cantidad de reclamos por página
+  const totalPages = Math.ceil(totalReclamosCount / limit);
+
+
+  async function cargarReclamos(page = currentPage) {
     try {
       setLoadingReclamos(true);
-      const data = await obtenerReclamosAdmin();
-      setReclamos(data);
+      const result = await obtenerReclamosAdmin(page, limit);
+      const estadisticas = await obtenerEstadisticasReclamosAdmin();
+
+      setReclamos(result.data);
+      setTotalReclamosCount(result.count);
+      setStats(estadisticas);
 
     } catch (error) {
       toast.error(error.message)
@@ -41,7 +57,7 @@ export default function AdminDashboard() {
           return;
         }
 
-        await cargarReclamos();
+        await cargarReclamos(currentPage);
         // const data = await obtenerReclamosAdmin();
         // setReclamos(data)
 
@@ -56,7 +72,7 @@ export default function AdminDashboard() {
     }
     checkSession();
 
-  }, [navigate]);
+  }, [navigate, currentPage]);
 
 
 
@@ -86,11 +102,7 @@ export default function AdminDashboard() {
     } catch (error) {
       toast.error(error.message);
     }
-  }
-
-  const totalReclamos = reclamos.length;
-  const pendientes = reclamos.filter((r) => r.estado === "pendiente").length;
-  const resueltos = reclamos.filter((r) => r.estado === "resuelto").length;
+  };
 
   if (checkingSession) {
     return (
@@ -149,9 +161,9 @@ export default function AdminDashboard() {
           </section>
 
           <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-6">
-            <Card title="Reclamos Totales" value={loadingReclamos ? '...' : totalReclamos} icon={ClipboardList} />
-            <Card title="Pendientes" value={loadingReclamos ? '...' : pendientes} icon={Clock} />
-            <Card title="Resueltos" value={loadingReclamos ? '...' : resueltos} icon={CheckCircle} />
+            <Card title="Reclamos Totales" value={loadingReclamos ? '...' : stats.total} icon={ClipboardList} />
+            <Card title="Pendientes" value={loadingReclamos ? '...' : stats.pendientes} icon={Clock} />
+            <Card title="Resueltos" value={loadingReclamos ? '...' : stats.resueltos} icon={CheckCircle} />
           </section>
 
           <section className="mt-8 bg-slate-900 border border-green-700 rounded-2xl p-5 shadow-xl">
@@ -239,8 +251,61 @@ export default function AdminDashboard() {
                     </table>
                   </div>
 
+                  {/* Paginación */}
+                  {
+                    totalPages > 1 && (
+                      <div className="hidden md:flex justify-center gap-4 mt-6">
+                        <button
+                          className="bg-slate-800 disabled:opacity-40 hover:bg-slate-700 px-4 py-2 rounded-xl font-bold"
+                          onClick={() => setCurrentPage((prev) => prev - 1)}
+                          disabled={currentPage === 1}
+                        >
+                          Anterior
+                        </button>
+
+                        <span className="text-gray-300">
+                          Página {currentPage} de {totalPages}
+                        </span>
+
+                        <button
+                          className="bg-slate-800 disabled:opacity-40 hover:bg-slate-700 px-4 py-2 rounded-xl font-bold"
+                          onClick={() => setCurrentPage((prev) => prev + 1)}
+                          disabled={currentPage === totalPages}
+                        >
+                          Siguiente
+                        </button>
+                      </div>
+                    )
+                  }
+
                   {/* Panel para Celulares */}
+
                   <div className="md:hidden space-y-4">
+                    {
+                      totalPages > 1 && (
+                        <div className="flex justify-center gap-3 mb-6">
+                          <button
+                            className="bg-slate-800 disabled:opacity-40 hover:bg-slate-700 px-3 py-2 rounded-xl font-bold text-sm"
+                            onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+                            disabled={currentPage === 1}
+                          >
+                            Anterior
+                          </button>
+
+                          <span className="text-gray-300 text-sm">
+                            {currentPage} de {totalPages}
+                          </span>
+
+                          <button
+                            className="bg-slate-800 disabled:opacity-40 hover:bg-slate-700 px-3 py-2 rounded-xl font-bold text-sm"
+                            onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+                            disabled={currentPage === totalPages}
+                          >
+                            Siguiente
+                          </button>
+                        </div>
+                      )
+                    }
                     {
                       reclamos.map(reclamo => (
                         <div
@@ -248,11 +313,11 @@ export default function AdminDashboard() {
                           className="bg-slate-950 border border-green-700 rounded-2xl p-4 space-y-3"
                         >
                           <div className="flex items-center justify-between gap-3">
-                            
+
                             <div className="flex items-center gap-2">
                               <p className="font-bold text-green-400">
-                              {reclamo.numero_reclamo}
-                            </p>
+                                {reclamo.numero_reclamo}
+                              </p>
 
                               {
                                 !reclamo.visto && (
@@ -302,6 +367,10 @@ export default function AdminDashboard() {
                         </div>
                       ))
                     }
+
+                    
+
+
                   </div>
                 </>
               )
