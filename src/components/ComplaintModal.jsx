@@ -268,6 +268,11 @@ export default function ComplaintModal({ isOpen, setIsOpen, selectedPosition, se
         setShowSuccess(false);
     };
 
+    function handleCloseModal() {
+        resetForm();
+        setIsOpen(false);
+    }
+
     function validateForm() {
         const newErrors = {};
 
@@ -476,7 +481,7 @@ export default function ComplaintModal({ isOpen, setIsOpen, selectedPosition, se
                 <div className="flex items-center justify-between px-6 py-4 border-b border-green-500 sticky top-0 bg-zinc-900 z-10">
                     <h2 className="text-3xl font-bold mb-6">Nuevo Reclamo</h2>
                     <button
-                        onClick={() => setIsOpen(false)}
+                        onClick={handleCloseModal}
                         className="absolute top-4 right-4 bg-green-600 hover:bg-green-500 text-white px-4 py-2 rounded-xl font-bold "
                     >
                         Cerrar
