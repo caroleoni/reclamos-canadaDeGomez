@@ -1,7 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import toast from "react-hot-toast";
 import L from "leaflet";
-import { MapContainer, Marker, TileLayer, useMapEvent } from "react-leaflet";
+import { MapContainer, Marker, TileLayer, useMap, useMapEvent } from "react-leaflet";
 import { createClaim, getCategories, uploadClaimPhoto } from "../services/claimsService";
 
 const initialFormData = {
@@ -21,22 +21,122 @@ const initialFormData = {
 const locationIcon = L.divIcon({
     html: `<div class="selected-location-pin">📍</div>`,
     className: "",
-    iconSize: [36, 36],
-    iconAnchor: [18, 36],
+    iconSize: [46, 46],
+    iconAnchor: [23, 46],
+    popupAnchor: [0, -46],
 });
 
-function LocationPicker({ selectedPosition, setSelectedPosition, setErrors }) {
+const CITY_CONTEXT = "Cañada de Gómez, Santa Fe, Argentina";
+const MAP_SEARCH_CENTER = { lat: -32.816, lon: -61.394 };
+
+function cleanAddressText(value) {
+    return value.trim().replace(/\s+/g, " ");
+}
+
+function parseIntersection(address) {
+    const cleanAddress = cleanAddressText(address);
+    const parts = cleanAddress
+        .split(/\s+(?:y|e)\s+|\s+esquina\s+/i)
+        .map(part => part.trim())
+        .filter(Boolean);
+
+    if (parts.length < 2) return null;
+
+    return {
+        firstStreet: parts[0],
+        secondStreet: parts[1],
+    };
+}
+
+function formatPhotonLabel(item) {
+    const props = item.properties || {};
+    return [
+        props.name,
+        props.street,
+        props.housenumber,
+        props.city,
+    ].filter(Boolean).join(", ");
+}
+
+function mapPhotonFeature(item, fallbackLabel = "") {
+    const coordinates = item.geometry?.coordinates;
+    if (!coordinates || coordinates.length < 2) return null;
+
+    const [lng, lat] = coordinates;
+    const label = formatPhotonLabel(item) || fallbackLabel;
+
+    if (!label || Number.isNaN(Number(lat)) || Number.isNaN(Number(lng))) {
+        return null;
+    }
+
+    return {
+        label,
+        lat: Number(lat),
+        lng: Number(lng),
+    };
+}
+
+function uniqueSuggestions(suggestions) {
+    const seenLabels = new Set();
+    const seenPositions = new Set();
+
+    return suggestions.filter(suggestion => {
+        if (!suggestion?.label) return false;
+
+        const labelKey = suggestion.label.toLowerCase();
+        const positionKey = `${suggestion.lat.toFixed(5)}|${suggestion.lng.toFixed(5)}`;
+
+        if (seenLabels.has(labelKey) || seenPositions.has(positionKey)) return false;
+        seenLabels.add(labelKey);
+        seenPositions.add(positionKey);
+        return true;
+    });
+}
+
+async function fetchPhotonSuggestions(query, limit = 5) {
+    const params = new URLSearchParams({
+        q: query,
+        limit: String(limit),
+        lat: String(MAP_SEARCH_CENTER.lat),
+        lon: String(MAP_SEARCH_CENTER.lon),
+    });
+
+    const response = await fetch(`https://photon.komoot.io/api/?${params.toString()}`);
+    const data = await response.json();
+
+    return data.features || [];
+}
+
+function LocationPicker({ selectedPosition, setSelectedPosition, setErrors, setShowAddressSuggestions }) {
     useMapEvent({
         click(e) {
             setSelectedPosition([e.latlng.lat, e.latlng.lng]);
+            setShowAddressSuggestions(false);
             setErrors((prev) => ({
                 ...prev,
                 position: "",
+                claimAddress: "",
             }));
         },
     });
     return selectedPosition ? <Marker position={selectedPosition} icon={locationIcon} /> : null;
 };
+
+//Para la ubicacion automatica del mapa. Esto hace que el mapa se mueva automáticamente al pin.
+function MapAutoFocus({ selectedPosition }) {
+    const map = useMap();
+
+    useEffect(() => {
+        if (selectedPosition) {
+            map.flyTo(selectedPosition, 17, {
+                animate: true,
+                duration: 1
+            });
+        }
+    }, [selectedPosition, map]);
+
+    return null;
+}
 
 export default function ComplaintModal({ isOpen, setIsOpen, selectedPosition, setSelectedPosition, addComplaint }) {
     const [formData, setFormData] = useState(initialFormData);
@@ -44,6 +144,13 @@ export default function ComplaintModal({ isOpen, setIsOpen, selectedPosition, se
     const [photoPreview, setPhotoPreview] = useState("");
     const [categories, setCategories] = useState([]);
     const [loading, setLoading] = useState(false);
+    //es para la busqueda manual en el mapa.
+    const [searchingLocation, setSearchingLocation] = useState(false);
+    //para la busca automatica en el mapa
+    const [addressSuggestions, setAddressSuggestions] = useState([]);
+    const [showAddressSuggestions, setShowAddressSuggestions] = useState(false);
+    const addressBoxRef = useRef(null);
+
     const [claimNumber, setClaimNumber] = useState(null);
     const [showSuccess, setShowSuccess] = useState(false);
 
@@ -59,6 +166,18 @@ export default function ComplaintModal({ isOpen, setIsOpen, selectedPosition, se
             }
         }
         loadCategories();
+    }, []);
+
+    useEffect(() => {
+        function handleClickOutside(e) {
+            if (addressBoxRef.current && !addressBoxRef.current.contains(e.target)) {
+                setShowAddressSuggestions(false);
+            }
+        }
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => {
+            document.removeEventListener("mousedown", handleClickOutside);
+        };
     }, []);
 
     if (showSuccess) {
@@ -124,6 +243,13 @@ export default function ComplaintModal({ isOpen, setIsOpen, selectedPosition, se
                 ...prev,
                 [name]: value
             }));
+            if (name === "claimAddress") {
+                setErrors(prev => ({
+                    ...prev,
+                    claimAddress: ""
+                }));
+                searchAddressSuggestions(value);
+            }
         }
         if (errors[name]) {
             setErrors(prev => ({
@@ -169,6 +295,118 @@ export default function ComplaintModal({ isOpen, setIsOpen, selectedPosition, se
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
     };
+
+    async function searchAddressSuggestions(address) {
+        const cleanAddress = cleanAddressText(address);
+
+        if (cleanAddress.length < 3) {
+            setAddressSuggestions([]);
+            setShowAddressSuggestions(false);
+            return;
+        }
+        try {
+            const cleanSuggestions = await getAddressSuggestions(cleanAddress);
+
+            setAddressSuggestions(cleanSuggestions);
+            setShowAddressSuggestions(cleanSuggestions.length > 0);
+
+        } catch (error) {
+            console.error(error);
+            setAddressSuggestions([]);
+            setShowAddressSuggestions(false);
+
+        }
+    }
+
+    async function getAddressSuggestions(address) {
+        const cleanAddress = cleanAddressText(address);
+        const intersection = parseIntersection(cleanAddress);
+        let suggestions = [];
+
+        if (intersection) {
+            const { firstStreet, secondStreet } = intersection;
+            const [firstStreetFeatures, secondStreetFeatures, combinedFeatures] = await Promise.all([
+                fetchPhotonSuggestions(`${firstStreet}, ${CITY_CONTEXT}`, 4),
+                fetchPhotonSuggestions(`${secondStreet}, ${CITY_CONTEXT}`, 4),
+                fetchPhotonSuggestions(`${firstStreet} y ${secondStreet}, ${CITY_CONTEXT}`, 4),
+            ]);
+            const firstStreetSuggestion = mapPhotonFeature(firstStreetFeatures[0], firstStreet);
+            const secondStreetSuggestion = mapPhotonFeature(secondStreetFeatures[0], secondStreet);
+            const combinedSuggestions = combinedFeatures
+                .map(item => mapPhotonFeature(item))
+                .filter(Boolean);
+
+            if (firstStreetSuggestion && secondStreetSuggestion) {
+                suggestions.push({
+                    label: `${firstStreet} y ${secondStreet}, ${CITY_CONTEXT} (aproximado)`,
+                    lat: (firstStreetSuggestion.lat + secondStreetSuggestion.lat) / 2,
+                    lng: (firstStreetSuggestion.lng + secondStreetSuggestion.lng) / 2,
+                });
+            }
+
+            suggestions = [
+                ...suggestions,
+                ...combinedSuggestions,
+                firstStreetSuggestion,
+                secondStreetSuggestion,
+            ].filter(Boolean);
+        } else {
+            const features = await fetchPhotonSuggestions(`${cleanAddress}, ${CITY_CONTEXT}`, 6);
+            suggestions = features
+                .map(item => mapPhotonFeature(item))
+                .filter(Boolean);
+        }
+
+        return uniqueSuggestions(suggestions);
+    }
+
+    async function handleSearchLocation() {
+        setShowAddressSuggestions(false);
+
+        if (!formData.claimAddress.trim()) {
+            setErrors((prev) => ({
+                ...prev,
+                claimAddress: "Por favor escribí un domicilio para buscarlo en el mapa."
+            }));
+            return;
+        }
+        setSearchingLocation(true);
+
+        try {
+            const suggestions = await getAddressSuggestions(formData.claimAddress);
+            const bestSuggestion = suggestions[0];
+
+            if (!bestSuggestion) {
+                setErrors((prev) => ({
+                    ...prev,
+                    claimAddress: "No se encontró esa dirección. Probá con otra o marcá la ubicación manualmente en el mapa."
+                }));
+                return;
+            }
+
+            setFormData(prev => ({
+                ...prev,
+                claimAddress: bestSuggestion.label,
+            }));
+            setSelectedPosition([bestSuggestion.lat, bestSuggestion.lng]);
+
+            setErrors((prev) => ({
+                ...prev,
+                position: "",
+                claimAddress: "",
+            }));
+
+            toast.success("Ubicación encontrada. Verificá que el pin esté en el lugar correcto.");
+
+        } catch (error) {
+            console.error(error);
+            toast.error("No se pudo buscar la dirección. Probá con otra o marcá la ubicación manualmente en el mapa.");
+        } finally {
+            setSearchingLocation(false);
+        }
+
+
+    }
 
     async function handleSubmit(e) {
         e.preventDefault();
@@ -308,6 +546,91 @@ export default function ComplaintModal({ isOpen, setIsOpen, selectedPosition, se
                             }
                         </div>
 
+                        <div className="border-t border-green-700 pt-4">
+                            <h3 className="text-xl font-bold mb-2">Datos de la ubicación</h3>
+
+                            <div className="mt-4">
+                                <label className="block mb-2 font-semibold">Barrio o Zona</label>
+                                <select
+                                    name="neighborhood"
+                                    value={formData.neighborhood}
+                                    onChange={handleChange}
+                                    className="w-full rounded-xl bg-black border border-green-700 focus:border-blue-500 px-4 py-3 outline-none"
+                                >
+                                    <option value="">Seleccioná Barrio/Zona</option>
+                                    <option value="centro">Centro</option>
+                                    <option value="norte">Norte</option>
+                                    <option value="sur">Sur</option>
+                                </select>
+                            </div>
+
+                            <div className="mt-4 relative" ref={addressBoxRef}>
+                                <label className="block mb-2 font-semibold">Domicilio del reclamo</label>
+                                <input
+                                    type="text"
+                                    className="w-full rounded-xl bg-black border border-green-700 focus:border-blue-500 px-4 py-3 outline-none"
+                                    placeholder="Ej: calle y número aproximado"
+                                    name="claimAddress"
+                                    value={formData.claimAddress}
+                                    onChange={handleChange}
+                                    onFocus={() => {
+                                        if (addressSuggestions.length > 0) setShowAddressSuggestions(true);
+                                    }}
+                                />
+
+                                {
+                                    showAddressSuggestions && addressSuggestions.length > 0 && (
+                                        <div className="mt-2 bg-black border border-green-700 rounded-xl overflow-hidden">
+                                            {
+                                                addressSuggestions.map((suggestion, index) => (
+                                                    <button
+                                                        type="button"
+                                                        key={index}
+                                                        onClick={() => {
+                                                            setFormData(prev => ({
+                                                                ...prev,
+                                                                claimAddress: suggestion.label,
+                                                            }));
+                                                            setSelectedPosition([suggestion.lat, suggestion.lng]);
+                                                            setShowAddressSuggestions(false);
+
+                                                            setErrors((prev) => ({
+                                                                ...prev,
+                                                                position: "",
+                                                                claimAddress: "",
+                                                            }));
+                                                            toast.success("Ubicación seleccionada. Verificá que el pin esté en el lugar correcto.", {
+                                                                duration: 4000,
+                                                            });
+                                                        }}
+                                                        className="w-full text-flex px-4 py-3 hover:bg-slate-800 border-b border-slate-800 last:border-b-0"
+                                                    >
+                                                        {suggestion.label || "Ubicación encontrada"}
+                                                    </button>
+
+                                                ))
+                                            }
+                                        </div>
+                                    )
+                                }
+
+                                {
+                                    errors.claimAddress && (
+                                        <p className="text-red-400 text-sm mt-1">{errors.claimAddress}</p>
+                                    )
+                                }
+                                <button
+                                    type="button"
+                                    onClick={handleSearchLocation}
+                                    disabled={searchingLocation}
+                                    className="mt-3 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white font-bold px-4 py-3 rounded-xl"
+                                >
+                                    {searchingLocation ? "Buscando..." : "Buscar ubicación en el mapa"}
+                                </button>
+                            </div>
+
+                        </div>
+
                         <div>
                             <label className="block mb-2 font-semibold">Ubicación del Reclamo</label>
                             <p className="text-sm text-gray-300 mb-2">
@@ -324,10 +647,14 @@ export default function ComplaintModal({ isOpen, setIsOpen, selectedPosition, se
                                         attribution="&copy; OpenStreetMap"
                                         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                                     />
+
+                                    <MapAutoFocus selectedPosition={selectedPosition} />
+
                                     <LocationPicker
                                         selectedPosition={selectedPosition}
                                         setSelectedPosition={setSelectedPosition}
                                         setErrors={setErrors}
+                                        setShowAddressSuggestions={setShowAddressSuggestions}
                                     />
                                 </MapContainer>
                             </div>
@@ -340,45 +667,6 @@ export default function ComplaintModal({ isOpen, setIsOpen, selectedPosition, se
                             {errors.position && (
                                 <p className="text-red-400 text-sm mt-1">{errors.position}</p>
                             )}
-                        </div>
-
-                        <div className="border-t border-green-700 pt-4">
-                            <h3 className="text-xl font-bold mb-2">Datos de la ubicación</h3>
-
-                            <div>
-                                <label className="block mb-2 font-semibold">Domicilio del reclamo</label>
-                                <input
-                                    type="text"
-                                    className="w-full rounded-xl bg-black border border-green-700 focus:border-blue-500 px-4 py-3 outline-none"
-                                    placeholder="Ej: calle y número aproximado"
-                                    name="claimAddress"
-                                    value={formData.claimAddress}
-                                    onChange={handleChange}
-                                />
-                            </div>
-
-                            <div className="mt-4">
-                                <label className="block mb-2 font-semibold">Barrio o Zona</label>
-                                {/* <input
-                                    type="text"
-                                    className="w-full rounded-xl bg-black border border-green-700 focus:border-blue-500 px-4 py-3 outline-none"
-                                    placeholder="Ej: centro, zona norte, barrio..."
-                                    name="neighborhood"
-                                    value={formData.neighborhood}
-                                    onChange={handleChange}
-                                /> */}
-                                <select
-                                    name="neighborhood"
-                                    value={formData.neighborhood}
-                                    onChange={handleChange}
-                                    className="w-full rounded-xl bg-black border border-green-700 focus:border-blue-500 px-4 py-3 outline-none"
-                                >
-                                    <option value="">Seleccioná Barrio/Zona</option>
-                                    <option value="centro">Centro</option>
-                                    <option value="norte">Norte</option>
-                                    <option value="sur">Sur</option>
-                                </select>
-                            </div>
                         </div>
 
                         <div className="border-t border-green-700 pt-4">
